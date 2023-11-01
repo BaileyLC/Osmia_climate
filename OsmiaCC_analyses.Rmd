@@ -1,0 +1,406 @@
+---
+title: "Bee microbiomes in a changing climate"
+author: ""
+date: ""
+output: html_document
+---
+#### **Purpose:** Analysis of treatment, life history & health data
+
+#### **Ownership:** Bailey Crowley & Robert Schaeffer
+
+
+#### Prepare workspace
+
+
+```{r, warning = FALSE}
+# Set working directory
+  setwd("~/Downloads")
+
+# Import data
+  all_sensors <- read.csv("Research/OsmiaCC/Monnit_sensors/all_sensors.csv")
+  health <- read.csv("health - Raw Data.csv")
+  duration <- read.csv("life_history - Data.csv")
+  mortality <- read.csv("mortality - Data.csv")
+```
+
+
+```{r, message = FALSE}
+# Load necessary packages
+  library(tidyverse)
+  library(lubridate)
+  library(dplyr)
+  library(readr)
+  library(xts)
+  library(ggplot2)
+  library(scales)
+  library(multcompView)
+  library(gridExtra)
+  library(cowplot)
+  library(knitr)
+  library(survival)
+  library(tibble)
+  library(ggsurvfit)
+```
+
+
+#### Analysis of temperature treatment data
+
+
+```{r}
+# Remove dates after July 4, when the experiment stopped
+  all_sensors <- all_sensors %>% filter(Date < '2023-07-04')
+
+# Format date column
+  all_sensors$Date <- as.Date(all_sensors$Date, format = "%Y-%m-%d")
+  
+# Combine date and time columns
+  all_sensors$DateTime <- as.POSIXct(paste(all_sensors$Date, all_sensors$Time),
+                                     format = "%Y-%m-%d %I:%M:%S %p")
+```
+
+
+```{r}
+# Manually order legend
+  all_sensors$Sensor <- factor(all_sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
+```
+
+
+```{r, fig.height = 8, fig.width = 18}
+# Plot temperature & humidity
+  ggplot(all_sensors, aes(x = DateTime, colour = Sensor, group = Sensor)) +
+              geom_line(aes(y = Temp, 
+                            linetype = "Temperature")) + 
+              geom_line(aes(y = Humidity, 
+                            linetype = "Humidity")) +
+              theme_bw() +
+              theme(legend.title = element_blank()) +
+              theme(text = element_text(size = 16)) +
+              xlab("Date") +
+              scale_y_continuous(name = "Temperature (°C)", 
+                                 sec.axis = sec_axis(trans = ~.*1, name = "Relative Humidity (%)")) +
+              scale_color_manual(values = c("#C62828",  "#616161", "#1565C0"))
+```
+
+
+#### Clean data
+
+
+
+```{r}
+# Remove rows with no data
+  health <- na.omit(health)
+
+# Subset to create dfs by sex
+  males_health <- health[health$sex == "M", ]
+  males_duration <- duration[duration$sex == "M", ]
+  males_mortality <- mortality[mortality$sex == "M", ]
+```
+
+
+#### Larval body mass
+
+
+```{r}
+# Determine sample sizes by sex & treatment
+  males_health_ss <- males_health %>%
+    group_by(combo_treat) %>%
+    tally()
+  males_health_ss
+```
+
+
+```{r}
+# Subset df to include just treatments and response variable (wet body mass)
+  males_health_mass <- males_health %>%
+    select(bee, temp_treat, micro_treat, combo_treat, wet_mass_mg)
+```
+
+
+```{r}
+# Do any of the group means differ?  
+  males_mass_lm <- lm(wet_mass_mg ~ temp_treat * micro_treat, data = males_health_mass)
+  males_mass_aov <- aov(males_mass_lm)
+  summary(males_mass_aov)
+```
+
+
+INTERPRETATION HERE
+
+
+```{r}
+# Which group means differ?  
+  mass_tukey <- TukeyHSD(males_mass_aov)
+  mass_tukey
+```
+
+
+INTERPRETATION HERE
+
+
+```{r}
+# Reorder the x-axis
+  males_health_mass$combo_treat <- factor(males_health_mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+```
+
+
+```{r}
+# Plot larval body mass by treatment
+ggplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
+    geom_boxplot(outlier.shape = NA, 
+                 width = 0.5, 
+                 position = position_dodge(width = 0.1)) + 
+    geom_jitter(size = 1, 
+                alpha = 0.9) +
+    theme_bw() +
+    theme(text = element_text(size = 16)) +
+    ylim(0, 20) +
+    scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
+    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+    scale_color_manual(name = "Treatment", 
+                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+    ggtitle("") +
+    ylab("Larval body mass (mg)") + 
+    xlab("Treatments")
+```
+
+
+INTERPRETATION
+
+
+#### Proportion of larval body fat
+
+
+```{r}
+# Subset df to include just treatments and response variable (wet body mass)
+  males_health_fat <- males_health %>%
+    select(bee, temp_treat, micro_treat, combo_treat, prop_body_fat)
+```
+
+
+```{r}
+# Do any of the group means differ?
+  males_fat_lm <- lm(prop_body_fat ~ temp_treat * micro_treat, data = males_health_fat)
+  males_fat_aov <- aov(males_fat_lm)
+  summary(males_fat_aov)
+```
+
+
+```{r}
+# Which group means differ?
+  fat_tukey <- TukeyHSD(males_fat_aov)
+  fat_tukey
+```
+
+
+INTERPRETATION HERE
+
+
+```{r}
+# Reorder the x-axis
+  males_health_fat$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+```
+
+
+```{r}
+# Plot the proportion of larval body fat by treatment
+ggplot(males_health_fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
+              geom_boxplot(outlier.shape = NA, 
+                           width = 0.5, 
+                           position = position_dodge(width = 0.1)) + 
+              geom_jitter(size = 1, 
+                          alpha = 0.9) +
+              theme_bw() +
+              theme(text = element_text(size = 16)) +
+              ylim(0, 6) +
+              scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+              scale_color_manual(name = "Treatment", 
+                                 values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                 labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+              ggtitle("") +
+              ylab("Proportion of body fat") + 
+              xlab("Treatment")
+```
+
+
+INTERPRETATION HERE
+
+
+#### Duration of developmental stages
+
+
+```{r}
+# Group males by treatment, then find the mean and sd for instars 1 & 2
+  males_duration_table <- males_duration %>%
+    group_by(combo_treat) %>%
+    summarise(mean_instar1 = mean(days_instar1.2),
+              sd_instar1 = sd(days_instar1.2),
+              mean_instar2 = mean(days_instar2.5),
+              sd_instar2 = sd(days_instar2.5))
+  males_duration_table
+```
+
+
+```{r}
+# Do any of the group means differ?
+  males_dev_lm <- lm(days_instar2.5 ~ temp_treat*micro_treat, data = males_duration)
+  anova_dev <- aov(males_dev_lm)
+  summary(anova_dev)
+```
+
+
+INTERPRETATION HERE
+
+
+```{r}
+# Which group means differ?
+  ph_dev_tukey <- TukeyHSD(anova_dev)
+  ph_dev_tukey
+```
+
+
+INTERPRETATION HERE
+
+
+```{r}
+# Reorder the x-axis
+  males_health$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+```
+
+
+```{r, warning = FALSE, message = FALSE}
+# Plot larval duration by treatment
+  ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
+        geom_boxplot(outlier.shape = NA) + 
+        geom_jitter(size = 1, 
+                    alpha = 0.9) +
+        theme_bw() +
+        theme(text = element_text(size = 16)) +
+        ylim(5, 20) +
+        scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
+        scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+        scale_color_manual(name = "Treatment", 
+                           values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                           labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +             
+              ggtitle("") +
+              ylab("Duration Larval instars II-V (days)") + 
+              xlab("Treatment")
+```
+
+
+INTERPRETATION HERE
+
+
+#### Mortality
+
+
+```{r}
+# Table of sample size per treatment
+  males_mortality_ss <- males_mortality %>%
+    group_by(combo_treat) %>%
+    tally()
+  males_mortality_ss
+```
+
+
+#### Survivorship analysis
+
+
+Helpful resource: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html
+
+
+Status: 0 = survival to the fifth instar; 1 = death
+
+
+```{r, warning = FALSE}
+# Convert chr to date
+  males_duration <- males_duration %>%
+                          mutate(
+                            date_nesting_start = ymd(date_nesting_start),
+                            date_nesting_end = ymd(date_nesting_end),
+                            date_graft = ymd(date_graft),
+                            date_instar1 = ymd(date_instar1),
+                            date_instar2 = ymd(date_instar2),
+                            date_instar5 = ymd(date_instar5),
+                            date_last_alive = ymd(date_last_alive)
+                          )
+```
+
+
+```{r}
+# Check to see if it worked  
+  tibble(males_duration)
+```
+
+
+```{r}
+# Calculate the number of days bees survived
+   males_duration <- males_duration %>%
+                          mutate(
+                            total_surv_days = as.duration(date_graft %--% date_last_alive / ddays(1))
+                          )
+```
+
+
+```{r}
+# Format chr to numeric
+   males_duration$total_surv_days <- as.numeric(males_duration$total_surv_days)
+```
+
+
+```{r}
+# Check to see if it worked   
+   head(males_duration)
+```
+
+
+```{r}
+# Create a survival object
+   Surv(males_duration$total_surv_days, males_duration$status)
+```
+
+
+```{r}
+# Create a survival curve
+  survfit(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
+```
+
+
+```{r}
+# Fit the line
+  s2 <- survfit2(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
+```
+
+
+```{r}
+# Plot Kaplan-Meier
+  ggsurvfit(s2) +
+      theme_classic() +
+      theme(legend.position = "right") +
+      theme(text = element_text(size = 16)) +
+      scale_color_manual(name = "Treatment", 
+                         values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                         labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+      scale_y_continuous(limits = c(0, 1)) +
+      scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+      labs(x = "Days", y = "Survival probability")
+```
+
+
+INTERPRETATION
+
+
+```{r}
+# Cox regression model
+  coxph(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
+```
+
+
+INTERPRETATION HERE
+
+
+```{r}
+# Compare survival times between treatments
+  survdiff(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
+```
+

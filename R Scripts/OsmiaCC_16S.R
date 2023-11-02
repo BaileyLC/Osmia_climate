@@ -177,12 +177,12 @@
   mod1 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
   anova(mod1)
   
-# Examine interactive effects of sample_type on Simpson richness
-  mod2 <- lme(Simpson ~ sample_type, random = ~1|sampleID, data = bactrich)
+# Examine interactive effects of temperature and microbiome treatments on Simpson richness
+  mod2 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
   anova(mod2)
   
-# Examine interactive effects of sample_type on observed richness
-  mod3 <- lme(Observed ~ sample_type, random = ~1|sampleID, data = bactrich)
+# Examine interactive effects of temperature and microbiome treatments on observed richness
+  mod3 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
   anova(mod3)
   
 # Reorder x-axis

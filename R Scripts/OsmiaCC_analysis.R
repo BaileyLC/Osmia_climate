@@ -45,23 +45,23 @@
 ## Analysis of temperature treatment data ----
 
 # Remove dates after July 4, when the experiment stopped
-  all_sensors <- all_sensors %>% filter(Date < '2023-07-04')
+  all_sensors <- all_sensors %>% filter(date < '2023-07-04')
 
 # Format date column
-  all_sensors$Date <- as.Date(all_sensors$Date, format = "%Y-%m-%d")
+  all_sensors$date <- as.Date(all_sensors$date, format = "%Y-%m-%d")
 
 # Combine date and time columns
-  all_sensors$DateTime <- as.POSIXct(paste(all_sensors$Date, all_sensors$Time),
+  all_sensors$DateTime <- as.POSIXct(paste(all_sensors$date, all_sensors$time),
                                      format = "%Y-%m-%d %I:%M:%S %p")  
 
 # Manually order legend
-  all_sensors$Sensor <- factor(all_sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
+  all_sensors$sensor <- factor(all_sensors$sensor, levels = c("warm", "ambient", "cool"))
 
 # Plot temperature & humidity
-  ggplot(all_sensors, aes(x = DateTime, colour = Sensor, group = Sensor)) +
-    geom_line(aes(y = Temp, 
+  ggplot(all_sensors, aes(x = DateTime, color = sensor, group = sensor)) +
+    geom_line(aes(y = temp, 
                   linetype = "Temperature")) + 
-    geom_line(aes(y = Humidity, 
+    geom_line(aes(y = humidity, 
                   linetype = "Humidity")) +
     theme_bw() +
     theme(legend.title = element_blank()) +

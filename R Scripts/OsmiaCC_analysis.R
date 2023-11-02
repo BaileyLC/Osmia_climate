@@ -27,8 +27,8 @@
 ## Import & format data ----
 
 # Import data
-  all_sensors <- read.csv("all_sensors.csv")
-  health <- read.csv("health - Raw Data.csv")
+  all_sensors <- read.csv("all_sensors - Data.csv")
+  health <- read.csv("health - Data.csv")
   duration <- read.csv("life_history - Data.csv")
   mortality <- read.csv("mortality - Data.csv")
 

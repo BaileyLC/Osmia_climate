@@ -152,7 +152,7 @@
   bactrich$combo_treat <- sample_data(ps2)$combo_treat
   
 # Plot species richness  
-  plot_richness(ps2, x = "sample_type", measures = c("Shannon", "Simpson"), color = "combo_treat") + 
+  plot_richness(ps2, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
     theme_bw() +
     xlab("")
   

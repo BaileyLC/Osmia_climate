@@ -135,7 +135,13 @@
   
 # What remains in the phyloseq object?
   ps3
+
+# How many reads are in each sample? 
+  sample_sums(ps3)
   
+# What is the mean number of reads in all samples?
+  mean(sample_sums(ps3))
+                                             
 # Add Seq to each taxa name
   taxa_names(ps3) <- paste0("Seq", seq(ntaxa(ps3)))
   

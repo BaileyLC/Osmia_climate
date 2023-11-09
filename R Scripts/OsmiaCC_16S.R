@@ -77,6 +77,8 @@
   
 # Determine which ASVs are contaminants based on prevalence (presence/absence) higher than 0.5 in negative controls
   contamdf.prev05 <- isContaminant(ps1, method = "prevalence", neg = "is.neg", threshold = 0.5)
+
+# How many contaminants are there?
   table(contamdf.prev05$contaminant)
   
 # Which ASVs are contaminants?

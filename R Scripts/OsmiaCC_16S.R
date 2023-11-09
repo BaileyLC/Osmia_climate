@@ -155,7 +155,9 @@
     ggtitle("Total number of reads") + 
     scale_y_log10() + 
     facet_wrap(~ type, 1, scales = "free")
-  
+
+## Species richness ----
+                                             
 # Estimate Shannon, Simpson & observed richness
   bactrich <- estimate_richness(ps3, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
   

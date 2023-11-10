@@ -3,11 +3,15 @@
 #### Ownership: Bailey Crowley & Robert N. Schaeffer
 
 ### Purpose: Quality control of 16S rRNA data using the DADA2 pipeline
+### Resource: https://benjjneb.github.io/dada2/tutorial_1_8.html
 
 ## Prepare work space ----
 
 # Set working directory
   setwd("~/Downloads")
+
+# Load packages
+  library(dada2)
 
 ## Prepare samples for quality control ----
 
@@ -16,8 +20,8 @@
   list.files(path)
 
 # Sort files to ensure forward/reverse reads are in the same order
-  fnFs <- sort(list.files(path, pattern = "_L001_R1_001.fastq", full.names = TRUE))
-  fnRs <- sort(list.files(path, pattern = "_L001_R2_001.fastq", full.names = TRUE))
+  fnFs <- sort(list.files(path, pattern = "_L001_R1_001.fastq.gz", full.names = TRUE))
+  fnRs <- sort(list.files(path, pattern = "_L001_R2_001.fastq.gz", full.names = TRUE))
 
 # Extract sample names
   sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1) 

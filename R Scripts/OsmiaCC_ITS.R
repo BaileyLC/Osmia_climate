@@ -49,7 +49,9 @@
   rownames(sampleinfo) <- samples.out
 
 # Format your data to work with phyloseq
-  ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa))
+  ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), 
+                  sample_data(sampleinfo), 
+                  tax_table(taxa))
   ps1
   
 ## Inspect & remove contaminants ----
@@ -84,11 +86,15 @@
   
 # Make phyloseq object of presence-absence in negative controls
   ps.neg <- prune_samples(sample_data(ps1)$sample_or_control == "control", ps1)
-  ps.neg.presence <- transform_sample_counts(ps.neg, function(abund) 1*(abund>0))
+
+# Calculate taxa abundance in samples from sample counts
+  ps.neg.presence <- transform_sample_counts(ps.neg, function(abund) 1*(abund > 0))
   
 # Make phyloseq object of presence-absence in true positive samples
   ps.pos <- prune_samples(sample_data(ps1)$sample_or_control == "sample", ps1)
-  ps.pos.presence <- transform_sample_counts(ps.pos, function(abund) 1*(abund>0))
+
+# Calculate taxa abundance in samples from sample counts
+  ps.pos.presence <- transform_sample_counts(ps.pos, function(abund) 1*(abund > 0))
   
 # Make data.frame of prevalence in positive and negative samples
   df.pres <- data.frame(prevalence.pos=taxa_sums(ps.pos.presence), 
@@ -359,4 +365,71 @@
           legend.text = element_text(size = 14, colour = "black")) + 
     guides(fill = guide_legend(ncol = 2)) +
     ggtitle("Fungi")
+
+## Differential abundance ----
+# Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
   
+# Remove patterns in tax_table   
+  tax_table(ps2)[, colnames(tax_table(ps2))] <- gsub(tax_table(ps2)[, colnames(tax_table(ps2))], pattern = "[a-z]__", replacement = "")
+  
+# Convert from a phyloseq to a deseq obj
+  desq_obj <- phyloseq_to_deseq2(ps2, ~ combo_treat)
+  
+# Calculate the geometric mean and remove rows with NA
+  gm_mean <- function(x, na.rm = TRUE) {
+    exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+  }
+  
+# Add a count of 1 to all geometric means 
+  geoMeans <- apply(counts(desq_obj), 1, gm_mean)
+  
+# Estimate size factors
+  desq_dds <- estimateSizeFactors(desq_obj, geoMeans = geoMeans)
+  
+# Fit a local regression
+  desq_dds <- DESeq(desq_dds, fitType = "local")
+  
+# Set significance factor  
+  alpha <- 0.05
+  
+# WN vs AN
+  
+# Extract results from differential abundance table for initial vs final provision
+  WN_AN <- results(desq_dds, contrast = c("combo_treat", "WN", "AN"))
+  
+# Order differential abundances by their padj value
+  WN_AN <- WN_AN[order(WN_AN$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  WN_AN_p05 <- WN_AN[(WN_AN$padj < alpha & !is.na(WN_AN$padj)), ]
+  
+# Check to see if any padj is below alpha
+  WN_AN_p05
+  
+# AN vs CN
+
+# Extract results from differential abundance table for initial vs final provision
+  AN_CN <- results(desq_dds, contrast = c("combo_treat", "AN", "CN"))
+  
+# Order differential abundances by their padj value
+  AN_CN <- AN_CN[order(AN_CN$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  AN_CN_p05 <- AN_CN[(AN_CN$padj < alpha & !is.na(AN_CN$padj)), ]
+  
+# Check to see if any padj is below alpha
+  AN_CN_p05
+
+# WN vs CN
+  
+# Extract results from differential abundance table for initial vs final provision
+  WN_CN <- results(desq_dds, contrast = c("combo_treat", "WN", "CN"))
+  
+# Order differential abundances by their padj value
+  WN_CN <- WN_CN[order(WN_CN$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  WN_CN_p05 <- WN_CN[(WN_CN$padj < alpha & !is.na(WN_CN$padj)), ]
+  
+# Check to see if any padj is below alpha
+  WN_CN_p05

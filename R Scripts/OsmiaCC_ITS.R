@@ -148,14 +148,14 @@
 ## Species richness ----
   
 # Calculate species richness
-  bactrich <- estimate_richness(ps2, split = TRUE, measures = c("Shannon", "Simpson", "Observed")) 
+  fungrich <- estimate_richness(ps2, split = TRUE, measures = c("Shannon", "Simpson", "Observed")) 
   
 # Build df with metadata
-  bactrich$sampleID <- sample_data(ps2)$sampleID
-  bactrich$sample_type <- sample_data(ps2)$sample_type
-  bactrich$temp_treat <- sample_data(ps2)$temp_treat
-  bactrich$micro_treat <- sample_data(ps2)$micro_treat
-  bactrich$combo_treat <- sample_data(ps2)$combo_treat
+  fungrich$sampleID <- sample_data(ps2)$sampleID
+  fungrich$sample_type <- sample_data(ps2)$sample_type
+  fungrich$temp_treat <- sample_data(ps2)$temp_treat
+  fungrich$micro_treat <- sample_data(ps2)$micro_treat
+  fungrich$combo_treat <- sample_data(ps2)$combo_treat
   
 # Plot species richness  
   plot_richness(ps2, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
@@ -163,30 +163,30 @@
     xlab("")
   
 # Remove samples with 0 species richness 
-  bactrich[bactrich == 0] <- NA
-  bactrich <- bactrich[complete.cases(bactrich), ]
+  fungrich[fungrich == 0] <- NA
+  fungrich <- fungrich[complete.cases(fungrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon richness
-  mod4 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+  mod4 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|sampleID, data = fungrich)
   anova(mod4)  
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson richness
-  mod5 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+  mod5 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|sampleID, data = fungrich)
   anova(mod5)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod6 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+  mod6 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|sampleID, data = fungrich)
   anova(mod6)
   
 # Reorder x-axis
-  bactrich$combo_treat <- factor(bactrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  fungrich$combo_treat <- factor(fungrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # New names for facet_grid
   type_names <- c('final provision' = "provisions with bee",
                   'provision w/o bee' = "provisions without bee")
   
 # Boxplot of Shannon richness
-  ggplot(bactrich, aes(x = combo_treat, y = Shannon, fill = combo_treat)) + 
+  ggplot(fungrich, aes(x = combo_treat, y = Shannon, fill = combo_treat)) + 
     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
     theme_bw() +
     facet_grid(~ sample_type, scale = "free", space = "free", labeller = as_labeller(type_names)) +
@@ -198,7 +198,7 @@
     ylab("Shannon richness")
   
 # Boxplot of Simpson richness
-  ggplot(bactrich, aes(x = combo_treat, y = Simpson, fill = combo_treat)) + 
+  ggplot(fungrich, aes(x = combo_treat, y = Simpson, fill = combo_treat)) + 
     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
     theme_bw() +
     facet_grid(~ sample_type, scale = "free", space = "free", labeller = as_labeller(type_names)) +
@@ -210,7 +210,7 @@
     ylab("Simpson richness")
   
 # Boxplot of Observed richness
-  ggplot(bactrich, aes(x = combo_treat, y = Observed, fill = combo_treat)) + 
+  ggplot(fungrich, aes(x = combo_treat, y = Observed, fill = combo_treat)) + 
     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
     theme_bw() +
     facet_grid(~ sample_type, scale = "free", space = "free", labeller = as_labeller(type_names)) +
@@ -234,9 +234,9 @@
   rareps <- rarefy_even_depth(ps2, sample.size = 15)
   
 # Perform PERMANOVA to test effects of treatments on bacterial community composition
-  bact_bray <- phyloseq::distance(rareps, method="bray")
-  samplebact <- data.frame(sample_data(rareps))
-  adonis2(bact_bray ~ temp_treat*micro_treat, data = samplebact)
+  fung_bray <- phyloseq::distance(rareps, method="bray")
+  samplefung <- data.frame(sample_data(rareps))
+  adonis2(fung_bray ~ temp_treat*micro_treat, data = samplefung)
   
 ## Ordination ----
   

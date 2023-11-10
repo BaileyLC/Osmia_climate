@@ -21,6 +21,7 @@
   library(unikn) # Version 0.9.0
   library(ShortRead) # Version 1.58.0
   library(dplyr) # Version 1.1.3
+  library(DESeq2) # Version 1.40.2
 
 # Import data
   seqtab.nochim <- readRDS("OsmiaCC_seqs16Sall.rds")

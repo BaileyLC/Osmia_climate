@@ -116,26 +116,21 @@
 
 ##  Prepare a path for your filtered reads ----  
 
-# Create a new file path to store filtered and trimmed reads
-  filt_path <- file.path(path.cut, "filtered") # Place filtered files in filtered subdirectory
-
 # Rename filtered files and place them in the filtered subdirectory
-  filtFs <- file.path(filt_path, paste0(sample.names, "_F_filt.fastq"))
-  filtRs <- file.path(filt_path, paste0(sample.names, "_R_filt.fastq"))
-  names(filtFs) <- sample.names
-  names(filtRs) <- sample.names
+  filtFs <- file.path(path.cut, "filtered", basename(cutFs))
+  filtRs <- file.path(path.cut, "filtered", basename(cutRs))
 
 ## Clean your reads ----   
   
 # Quality filtering and trimming
-  out <- filterAndTrim(cutFs, filtFs, cutRs, filtRs,  # specify object that contains your unfiltered reads, followed by the object that contains your unfiltered reads
-                       truncLen = c(200, 130), # truncates reads a specified base (forward, reverse) 
-                       maxN = 0, # set the maximum number of ambiguous bps allowed (must be zero for DADA2)
-                       maxEE = c(2, 2), # set the maximum number of estimated errors allowed for an individual read
-                       truncQ = 2, # truncates reads at the first instance of a Q score less than or equal to the specified value
-                       rm.phix = TRUE, # removes reads identified as belonging to the phiX phage
-                       compress = TRUE, # zips FASTQ files
-                       multithread = TRUE) # allows FASTQ files to be processed in parallel
+  out <- filterAndTrim(cutFs, filtFs, cutRs, filtRs, 
+                       maxN = 0, 
+                       maxEE = c(2, 2), 
+                       truncQ = 2,
+                       minLen = 50, 
+                       rm.phix = TRUE, 
+                       compress = TRUE, 
+                       multithread = TRUE)  # on windows, set multithread = FALSE
   
   head(out)
   

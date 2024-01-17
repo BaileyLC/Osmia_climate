@@ -25,6 +25,10 @@
   library(gtsummary)
   library(car)
   library(emmeans)
+  library(stats)
+  library(FSA)
+  library(lmtest)
+  library(survMisc)
 
 ## Import data ----
 
@@ -73,16 +77,15 @@
 
 ## Larval body mass ----
   
-# Determine sample sizes by sex & treatment
-  males_health_ss <- males_health %>%
-    group_by(combo_treat) %>%
-    tally()
-  
-  males_health_ss
-  
 # Subset df to include just treatments and response variable (wet body mass)
   males_health_mass <- males_health %>%
     select(bee, temp_treat, micro_treat, combo_treat, wet_mass_mg)
+  
+# Determine sample sizes by sex & treatment
+  males_health_mass_ss <- males_health_mass %>%
+    group_by(combo_treat) %>%
+    tally()
+  males_health_mass_ss
   
 # ANOVA: Do any of the group means differ?
   males_mass_aov <- aov(wet_mass_mg ~ temp_treat * micro_treat, data = males_health_mass)
@@ -104,9 +107,7 @@
   mass_tukey
   
 # Linear contrasts
-# Helpful resources: https://bookdown.org/pingapang9/linear_models_bookdown/chap-contrasts.html#contrasts-and-dummy-coding
-                   # https://marissabarlaz.github.io/portfolio/contrastcoding/
-                   # https://mspeekenbrink.github.io/sdam-r-companion/contrast-coding-and-oneway-anova.html
+# Resource: https://bookdown.org/pingapang9/linear_models_bookdown/chap-contrasts.html#contrasts-and-dummy-coding
 
 # What is the difference in wet body mass between sterile vs natural treatments? Dummy coding
 
@@ -117,7 +118,7 @@
 # Set micro_treat reference group as sterile
   males_health_mass <- males_health_mass %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
   levels(males_health_mass$micro_treat)
-  
+
 # Set temp_treat reference group as ambient  
   males_health_mass <- males_health_mass %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
   levels(males_health_mass$temp_treat)
@@ -134,9 +135,9 @@
 
 # Reorder the x-axis
   males_health_mass$combo_treat <- factor(males_health_mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
-  
+
 # Plot larval body mass by treatment
-  gplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
+  bm <- ggplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
     geom_boxplot(outlier.shape = NA,
                  width = 0.5,
                  position = position_dodge(width = 0.1)) + 
@@ -160,7 +161,13 @@
 # Subset df to include just treatments and response variable (wet body mass)
   males_health_fat <- males_health %>%
     select(bee, temp_treat, micro_treat, combo_treat, prop_body_fat)
-
+  
+# Determine sample sizes by sex & treatment
+  males_health_fat_ss <- males_health_fat %>%
+    group_by(combo_treat) %>%
+    tally()
+  males_health_fat_ss
+  
 # ANOVA: Do any of the group means differ?
   males_fat_aov <- aov(prop_body_fat ~ temp_treat * micro_treat, data = males_health_fat)
   
@@ -210,7 +217,7 @@
   males_health_fat$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
 
 # Plot the proportion of larval body fat by treatment
-  ggplot(males_health_fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
+  fat <- ggplot(males_health_fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
     geom_boxplot(outlier.shape = NA, 
                  width = 0.5, 
                  position = position_dodge(width = 0.1)) + 
@@ -230,52 +237,35 @@
 
 ## Duration of developmental stages ----
 
+# Determine sample sizes by sex & treatment
+  males_duration_ss <- males_health %>%
+    group_by(combo_treat) %>%
+    tally()
+  males_duration_ss
+  
 # ANOVA: Do any of the group means differ?
-  males_dev_aov <- aov(days_instar2.5 ~ temp_treat*micro_treat, data = males_duration)
+  males_dev_aov <- aov(days_instar2.5 ~ temp_treat + micro_treat, data = males_duration)
   
 # Check for normality
   qqPlot(males_dev_aov$residuals, id = FALSE)  
   
 # Shapiro-Wilk normality test
   shapiro.test(males_dev_aov$residuals)
-  
-# Histograms of each treatment combination
-  dev_CN <- males_duration[males_duration$combo_treat == "CN", ]
-  hist(dev_CN$days_instar2.5)
-  
-  dev_CS <- males_duration[males_duration$combo_treat == "CS", ]
-  hist(dev_CS$days_instar2.5)
-  
-  dev_AN <- males_duration[males_duration$combo_treat == "AN", ]
-  hist(dev_AN$days_instar2.5)
-  
-  dev_AS <- males_duration[males_duration$combo_treat == "AS", ]
-  hist(dev_AS$days_instar2.5)
-  
-  dev_WN <- males_duration[males_duration$combo_treat == "WN", ]
-  hist(dev_WN$days_instar2.5)
-  
-  dev_WS <- males_duration[males_duration$combo_treat == "WS", ]
-  hist(dev_WS$days_instar2.5)
-  
+
 # Levene's test to assess for equal variance
   leveneTest(males_duration$days_instar2.5 ~ males_duration$combo_treat)
-  
-# Kruskal-Walllis test
-  library(stats)
-  library(FSA)
-  
+
+# Kruskal-Wallis test: non-parametric one-way analysis of variance
   kruskal.test(days_instar2.5 ~ combo_treat, data = males_duration)
-  
-  pairwise.wilcox.test(males_duration$days_instar2.5, males_duration$combo_treat, p.adjust.method = "BH")
-  
+
+# Post-hoc: Dunn's test
   dunnTest(days_instar2.5 ~ combo_treat, data = males_duration, method = "bonferroni")
 
 # Reorder the x-axis
   males_health$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
 
 # Plot larval duration by treatment
-  ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
+  dur <- ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
     geom_boxplot(outlier.shape = NA) + 
     geom_jitter(size = 1, 
                 alpha = 0.9) +
@@ -291,21 +281,19 @@
     ylab("Duration Larval instars II-V (days)") + 
     xlab("Treatment") 
 
-## Mortality
+## Mortality ----
 
 # Table of sample size per treatment
   males_mortality_ss <- males_mortality %>%
     group_by(combo_treat) %>%
     tally()
-
-# View table  
   males_mortality_ss
 
 ## Survivorship analysis ----
 # Resource: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html  
 # NOTE: Status: 0 = survival to the fifth instar; 1 = death
-
-# Convert chr to date
+  
+# Convert character to date
   males_duration <- males_duration %>%
     mutate(
       date_nesting_start = ymd(date_nesting_start),
@@ -332,11 +320,32 @@
 # Check to see if it worked   
   head(males_duration)
 
+# NOTE: The analyses below includes bees that died within the first 48 h after grafting  
+  
 # Create a survival object
   Surv(males_duration$total_surv_days, males_duration$status)
 
 # Fit the survival curve
-  s2 <- survfit2(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
+  s2 <- survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+  summary(s2)
+  
+# Display median survival time by combo_treat
+  males_duration %>%
+    filter(status == 1) %>%
+    group_by(combo_treat) %>%
+    summarize(median_surv = median(total_surv_days))
+  
+# Display median survival time by temp_treat
+  males_duration %>%
+    filter(status == 1) %>%
+    group_by(temp_treat) %>%
+    summarize(median_surv = median(total_surv_days))
+  
+# Display median survival time by micro_treat
+  males_duration %>%
+    filter(status == 1) %>%
+    group_by(micro_treat) %>%
+    summarize(median_surv = median(total_surv_days))
 
 # Plot Kaplan-Meier
   ggsurvfit(s2) +
@@ -349,23 +358,75 @@
     scale_y_continuous(limits = c(0, 1)) +
     scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
     labs(x = "Days", y = "Survival probability")
+  
+# Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
+  survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
 
-# Cox regression model
-  library(lmtest)
+# Cox regression model to compare survival times between groups (allows risk of death to vary across time)
+  cox_model1 <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+  summary(cox_model1)
   
-  full <- coxph(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration) 
-  reduced <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
-  
-  lrtest(full, reduced)
-  
-# Log-rank test: compare survival times between treatments
-  survdiff(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
-  
-# Display other survival analyses
-## 1 = log-rank, 2 = Gehan-Breslow generalized Wilcoxon
+# Test the proportional hazards assumption
+  par(mfrow = c(2, 1))
 
-  library(survMisc)
-  surv_model <- survfit2(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
-  tenfit <- ten(surv_model)
-  comp(tenfit)
-  kable(attr(tenfit, "lrt"))
+  cz1 <- cox.zph(cox_model1)
+  print(cz1)
+  plot (cz1)
+  
+# NOTE: The analyses below does NOT include bees that died within the first 48 h after grafting
+
+# Remove bees that died within 48 h of grafting
+  males_duration48 <- males_duration %>% 
+    filter(date_last_alive > '2023-06-08')
+  
+# Create a survival object
+  Surv(males_duration48$total_surv_days, males_duration48$status)
+  
+# Fit the survival curve
+  s3 <- survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
+  summary(s3)
+  
+# Display median survival time by combo_treat
+  males_duration48 %>%
+    filter(status == 1) %>%
+    group_by(combo_treat) %>%
+    summarize(median_surv = median(total_surv_days))
+  
+# Display median survival time by temp_treat
+  males_duration48 %>%
+    filter(status == 1) %>%
+    group_by(temp_treat) %>%
+    summarize(median_surv = median(total_surv_days))
+  
+# Display median survival time by micro_treat
+  males_duration48 %>%
+    filter(status == 1) %>%
+    group_by(micro_treat) %>%
+    summarize(median_surv = median(total_surv_days))
+  
+# Plot Kaplan-Meier
+  ggsurvfit(s3) +
+    theme_classic() +
+    theme(legend.position = "right") +
+    theme(text = element_text(size = 16)) +
+    scale_color_manual(name = "Treatment", 
+                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+    scale_y_continuous(limits = c(0, 1)) +
+    scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+    labs(x = "Days", y = "Survival probability")
+  
+# Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
+  survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
+  
+# Cox regression model to compare survival times between groups (allows risk of death to vary across time)
+  cox_model2 <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
+  summary(cox_model2)
+
+# Test the proportional hazards assumption
+  par(mfrow = c(2, 1))
+  
+  cz2 <- cox.zph(cox_model2)
+  print(cz2)
+  plot (cz2)
+  

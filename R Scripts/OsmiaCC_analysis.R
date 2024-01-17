@@ -23,11 +23,13 @@
   library(tibble)
   library(ggsurvfit)
   library(gtsummary)
+  library(car)
+  library(emmeans)
 
-## Import & format data ----
+## Import data ----
 
 # Import data
-  all_sensors <- read.csv("all_sensors - Data.csv")
+  all_sensors <- read.csv("all_sensors.csv")
   health <- read.csv("health - Data.csv")
   duration <- read.csv("life_history - Data.csv")
   mortality <- read.csv("mortality - Data.csv")
@@ -43,66 +45,105 @@
   males_mortality <- mortality[mortality$sex == "M", ]
 
 ## Analysis of temperature treatment data ----
-
-# Remove dates after July 4, when the experiment stopped
-  all_sensors <- all_sensors %>% filter(date < '2023-07-04')
-
+  
 # Format date column
-  all_sensors$date <- as.Date(all_sensors$date, format = "%Y-%m-%d")
+  all_sensors$Date <- as.Date(all_sensors$Date, format = "%Y-%m-%d")
+  
+# Remove dates after July 4, when the experiment stopped
+  all_sensors <- all_sensors %>% filter(Date < '2023-07-04')
 
 # Combine date and time columns
-  all_sensors$DateTime <- as.POSIXct(paste(all_sensors$date, all_sensors$time),
+  all_sensors$DateTime <- as.POSIXct(paste(all_sensors$Date, all_sensors$Time),
                                      format = "%Y-%m-%d %I:%M:%S %p")  
 
 # Manually order legend
-  all_sensors$sensor <- factor(all_sensors$sensor, levels = c("warm", "ambient", "cool"))
+  all_sensors$Sensor <- factor(all_sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
 
 # Plot temperature & humidity
-  ggplot(all_sensors, aes(x = DateTime, color = sensor, group = sensor)) +
-    geom_line(aes(y = temp, 
-                  linetype = "Temperature")) + 
-    geom_line(aes(y = humidity, 
-                  linetype = "Humidity")) +
+  ggplot(all_sensors, aes(x = DateTime, color = Sensor, group = Sensor)) +
+    geom_line(aes(y = Temp, linetype = "Temperature")) + 
+    geom_line(aes(y = Humidity, linetype = "Humidity")) +
     theme_bw() +
     theme(legend.title = element_blank()) +
     theme(text = element_text(size = 16)) +
     xlab("Date") +
     scale_y_continuous(name = "Temperature (°C)", 
                        sec.axis = sec_axis(trans = ~.*1, name = "Relative Humidity (%)")) +
-    scale_color_manual(values = c("#C62828",  "#616161", "#1565C0"))  
+    scale_color_manual(values = c("#C62828",  "#616161", "#1565C0"))
 
 ## Larval body mass ----
-
+  
 # Determine sample sizes by sex & treatment
   males_health_ss <- males_health %>%
     group_by(combo_treat) %>%
     tally()
+  
   males_health_ss
-
+  
 # Subset df to include just treatments and response variable (wet body mass)
   males_health_mass <- males_health %>%
     select(bee, temp_treat, micro_treat, combo_treat, wet_mass_mg)
+  
+# ANOVA: Do any of the group means differ?
+  males_mass_aov <- aov(wet_mass_mg ~ temp_treat * micro_treat, data = males_health_mass)
 
-# ANOVA: Do any of the group means differ?  
-  males_mass_lm <- lm(wet_mass_mg ~ temp_treat * micro_treat, data = males_health_mass)
-  males_mass_aov <- aov(males_mass_lm)
-  summary(males_mass_aov)  
-
+# Check for normality
+  qqPlot(males_mass_aov$residuals, id = FALSE)  
+  
+# Shapiro-Wilk normality test
+  shapiro.test(males_mass_aov$residuals)
+  
+# Levene's test to assess for equal variance
+  leveneTest(males_health_mass$wet_mass_mg ~ males_health_mass$combo_treat)
+  
+# ANOVA output
+  summary(males_mass_aov)
+  
 # Post-hoc: Which group means differ?  
   mass_tukey <- TukeyHSD(males_mass_aov)
   mass_tukey
+  
+# Linear contrasts
+# Helpful resources: https://bookdown.org/pingapang9/linear_models_bookdown/chap-contrasts.html#contrasts-and-dummy-coding
+                   # https://marissabarlaz.github.io/portfolio/contrastcoding/
+                   # https://mspeekenbrink.github.io/sdam-r-companion/contrast-coding-and-oneway-anova.html
+
+# What is the difference in wet body mass between sterile vs natural treatments? Dummy coding
+
+# Ensure micro_treat and temp_treat are factors
+  males_health_mass$micro_treat <- as.factor(males_health_mass$micro_treat)
+  males_health_mass$temp_treat <- as.factor(males_health_mass$temp_treat)
+  
+# Set micro_treat reference group as sterile
+  males_health_mass <- males_health_mass %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males_health_mass$micro_treat)
+  
+# Set temp_treat reference group as ambient  
+  males_health_mass <- males_health_mass %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males_health_mass$temp_treat)
+
+# Run linear model
+  lm_mass1 <- lm(wet_mass_mg ~ micro_treat + temp_treat, data = males_health_mass)
+  summary(lm_mass1)
+
+# Display estimated marginal means for each pairwise comparison grouped by temperature treatment
+  emmeans(lm_mass1, "micro_treat", by = "temp_treat")
+
+# Display p-values for pairwise comparisons grouped by temperature treatment
+  pairs(emmeans(lm_mass1, "micro_treat", by = "temp_treat"))
 
 # Reorder the x-axis
-  males_health_mass$combo_treat <- factor(males_health_mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))  
-
+  males_health_mass$combo_treat <- factor(males_health_mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
 # Plot larval body mass by treatment
-  ggplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA, 
-                 width = 0.5, 
+  gplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
+    geom_boxplot(outlier.shape = NA,
+                 width = 0.5,
                  position = position_dodge(width = 0.1)) + 
     geom_jitter(size = 1, 
                 alpha = 0.9) +
     theme_bw() +
+    theme(legend.position = "none") + 
     theme(text = element_text(size = 16)) +
     ylim(0, 20) +
     scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
@@ -110,9 +151,9 @@
     scale_color_manual(name = "Treatment", 
                        values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
                        labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    ggtitle("") +
+    ggtitle("A") +
     ylab("Larval body mass (mg)") + 
-    xlab("Treatments")  
+    xlab("Treatments")
 
 ## Proportion of larval body fat ----
 
@@ -121,13 +162,49 @@
     select(bee, temp_treat, micro_treat, combo_treat, prop_body_fat)
 
 # ANOVA: Do any of the group means differ?
-  males_fat_lm <- lm(prop_body_fat ~ temp_treat * micro_treat, data = males_health_fat)
-  males_fat_aov <- aov(males_fat_lm)
+  males_fat_aov <- aov(prop_body_fat ~ temp_treat * micro_treat, data = males_health_fat)
+  
+# Check for normality
+  qqPlot(males_fat_aov$residuals, id = FALSE)  
+  
+# Shapiro-Wilk normality test
+  shapiro.test(males_fat_aov$residuals)
+  
+# Levene's test to assess for equal variance
+  leveneTest(males_health_fat$prop_body_fat ~ males_health_fat$combo_treat)
+  
+# ANOVA output  
   summary(males_fat_aov)
 
 # Post-hoc: Which group means differ?
   fat_tukey <- TukeyHSD(males_fat_aov)
   fat_tukey
+
+# Linear contrasts
+  
+# What is the difference in total body fat between sterile vs natural treatments? Dummy coding
+  
+# Ensure micro_treat and temp_treat are factors
+  males_health_fat$micro_treat <- as.factor(males_health_fat$micro_treat)
+  males_health_fat$temp_treat <- as.factor(males_health_fat$temp_treat)
+  
+# Set micro_treat reference group as sterile
+  males_health_fat <- males_health_fat %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males_health_fat$micro_treat)
+  
+# Set temp_treat reference group as ambient  
+  males_health_fat <- males_health_fat %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males_health_mass$temp_treat)
+  
+# Run linear model
+  lm_mass2 <- lm(prop_body_fat ~ micro_treat + temp_treat, data = males_health_fat)
+  summary(lm_mass2)
+  
+# Display estimated marginal means for each pairwise comparison grouped by temperature treatment
+  emmeans(lm_mass2, "micro_treat", by = "temp_treat")
+  
+# Display p-values for pairwise comparisons grouped by temperature treatment
+  pairs(emmeans(lm_mass2, "micro_treat", by = "temp_treat"))
 
 # Reorder the x-axis
   males_health_fat$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -140,26 +217,59 @@
     geom_jitter(size = 1, 
                 alpha = 0.9) +
     theme_bw() +
+    theme(legend.position = "none") +
     theme(text = element_text(size = 16)) +
     ylim(0, 6) +
     scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
     scale_color_manual(name = "Treatment", 
                        values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
                        labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    ggtitle("") +
+    ggtitle("B") +
     ylab("Proportion of body fat") + 
     xlab("Treatment")
 
 ## Duration of developmental stages ----
 
 # ANOVA: Do any of the group means differ?
-  males_dev_lm <- lm(days_instar2.5 ~ temp_treat*micro_treat, data = males_duration)
-  anova_dev <- aov(males_dev_lm)
-  summary(anova_dev)
-
-# Post-hoc: Which group means differ?
-  ph_dev_tukey <- TukeyHSD(anova_dev)
-  ph_dev_tukey
+  males_dev_aov <- aov(days_instar2.5 ~ temp_treat*micro_treat, data = males_duration)
+  
+# Check for normality
+  qqPlot(males_dev_aov$residuals, id = FALSE)  
+  
+# Shapiro-Wilk normality test
+  shapiro.test(males_dev_aov$residuals)
+  
+# Histograms of each treatment combination
+  dev_CN <- males_duration[males_duration$combo_treat == "CN", ]
+  hist(dev_CN$days_instar2.5)
+  
+  dev_CS <- males_duration[males_duration$combo_treat == "CS", ]
+  hist(dev_CS$days_instar2.5)
+  
+  dev_AN <- males_duration[males_duration$combo_treat == "AN", ]
+  hist(dev_AN$days_instar2.5)
+  
+  dev_AS <- males_duration[males_duration$combo_treat == "AS", ]
+  hist(dev_AS$days_instar2.5)
+  
+  dev_WN <- males_duration[males_duration$combo_treat == "WN", ]
+  hist(dev_WN$days_instar2.5)
+  
+  dev_WS <- males_duration[males_duration$combo_treat == "WS", ]
+  hist(dev_WS$days_instar2.5)
+  
+# Levene's test to assess for equal variance
+  leveneTest(males_duration$days_instar2.5 ~ males_duration$combo_treat)
+  
+# Kruskal-Walllis test
+  library(stats)
+  library(FSA)
+  
+  kruskal.test(days_instar2.5 ~ combo_treat, data = males_duration)
+  
+  pairwise.wilcox.test(males_duration$days_instar2.5, males_duration$combo_treat, p.adjust.method = "BH")
+  
+  dunnTest(days_instar2.5 ~ combo_treat, data = males_duration, method = "bonferroni")
 
 # Reorder the x-axis
   males_health$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
@@ -177,7 +287,7 @@
     scale_color_manual(name = "Treatment", 
                        values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
                        labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +             
-    ggtitle("") +
+    ggtitle("C") +
     ylab("Duration Larval instars II-V (days)") + 
     xlab("Treatment") 
 
@@ -225,10 +335,7 @@
 # Create a survival object
   Surv(males_duration$total_surv_days, males_duration$status)
 
-# Create a survival curve
-  survfit(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
-
-# Fit the line
+# Fit the survival curve
   s2 <- survfit2(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
 
 # Plot Kaplan-Meier
@@ -244,7 +351,21 @@
     labs(x = "Days", y = "Survival probability")
 
 # Cox regression model
-  coxph(Surv(total_surv_days, status) ~ combo_treat, data = males_duration) 
-
-# Compare survival times between treatments
+  library(lmtest)
+  
+  full <- coxph(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration) 
+  reduced <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+  
+  lrtest(full, reduced)
+  
+# Log-rank test: compare survival times between treatments
   survdiff(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
+  
+# Display other survival analyses
+## 1 = log-rank, 2 = Gehan-Breslow generalized Wilcoxon
+
+  library(survMisc)
+  surv_model <- survfit2(Surv(total_surv_days, status) ~ combo_treat, data = males_duration)
+  tenfit <- ten(surv_model)
+  comp(tenfit)
+  kable(attr(tenfit, "lrt"))

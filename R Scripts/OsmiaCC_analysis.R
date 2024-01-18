@@ -15,7 +15,7 @@
   library(ggplot2)
   library(multcompView)
   library(ggsignif)
-  library(gridExtra)
+  library(patchwork)
   library(cowplot)
   library(knitr)
   library(dplyr)
@@ -133,29 +133,6 @@
 # Display p-values for pairwise comparisons grouped by temperature treatment
   pairs(emmeans(lm_mass1, "micro_treat", by = "temp_treat"))
 
-# Reorder the x-axis
-  males_health_mass$combo_treat <- factor(males_health_mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
-
-# Plot larval body mass by treatment
-  bm <- ggplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA,
-                 width = 0.5,
-                 position = position_dodge(width = 0.1)) + 
-    geom_jitter(size = 1, 
-                alpha = 0.9) +
-    theme_bw() +
-    theme(legend.position = "none") + 
-    theme(text = element_text(size = 16)) +
-    ylim(0, 20) +
-    scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
-    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    ggtitle("A") +
-    ylab("Larval body mass (mg)") + 
-    xlab("Treatments")
-
 ## Proportion of larval body fat ----
 
 # Subset df to include just treatments and response variable (wet body mass)
@@ -213,28 +190,6 @@
 # Display p-values for pairwise comparisons grouped by temperature treatment
   pairs(emmeans(lm_mass2, "micro_treat", by = "temp_treat"))
 
-# Reorder the x-axis
-  males_health_fat$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
-
-# Plot the proportion of larval body fat by treatment
-  fat <- ggplot(males_health_fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA, 
-                 width = 0.5, 
-                 position = position_dodge(width = 0.1)) + 
-    geom_jitter(size = 1, 
-                alpha = 0.9) +
-    theme_bw() +
-    theme(legend.position = "none") +
-    theme(text = element_text(size = 16)) +
-    ylim(0, 6) +
-    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    ggtitle("B") +
-    ylab("Proportion of body fat") + 
-    xlab("Treatment")
-
 ## Duration of developmental stages ----
 
 # Determine sample sizes by sex & treatment
@@ -260,26 +215,6 @@
 
 # Post-hoc: Dunn's test
   dunnTest(days_instar2.5 ~ combo_treat, data = males_duration, method = "bonferroni")
-
-# Reorder the x-axis
-  males_health$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
-
-# Plot larval duration by treatment
-  dur <- ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA) + 
-    geom_jitter(size = 1, 
-                alpha = 0.9) +
-    theme_bw() +
-    theme(text = element_text(size = 16)) +
-    ylim(5, 20) +
-    scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
-    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +             
-    ggtitle("C") +
-    ylab("Duration Larval instars II-V (days)") + 
-    xlab("Treatment") 
 
 ## Mortality ----
 
@@ -346,18 +281,6 @@
     filter(status == 1) %>%
     group_by(micro_treat) %>%
     summarize(median_surv = median(total_surv_days))
-
-# Plot Kaplan-Meier
-  ggsurvfit(s2) +
-    theme_classic() +
-    theme(legend.position = "right") +
-    theme(text = element_text(size = 16)) +
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    scale_y_continuous(limits = c(0, 1)) +
-    scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
-    labs(x = "Days", y = "Survival probability")
   
 # Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
   survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
@@ -404,18 +327,6 @@
     group_by(micro_treat) %>%
     summarize(median_surv = median(total_surv_days))
   
-# Plot Kaplan-Meier
-  ggsurvfit(s3) +
-    theme_classic() +
-    theme(legend.position = "right") +
-    theme(text = element_text(size = 16)) +
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    scale_y_continuous(limits = c(0, 1)) +
-    scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
-    labs(x = "Days", y = "Survival probability")
-  
 # Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
   survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
   
@@ -429,4 +340,106 @@
   cz2 <- cox.zph(cox_model2)
   print(cz2)
   plot (cz2)
+  
+## Plots ----  
+
+# Body mass
+
+# Reorder the x-axis
+  males_health_mass$combo_treat <- factor(males_health_mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot larval body mass by treatment
+  bm <- ggplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
+    geom_boxplot(outlier.shape = NA,
+                 width = 0.5,
+                 position = position_dodge(width = 0.1)) + 
+    geom_jitter(size = 1, 
+                alpha = 0.9) +
+    theme_bw() +
+    theme(legend.position = "none") + 
+    theme(text = element_text(size = 16)) +
+    ylim(0, 20) +
+    scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
+    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+    scale_color_manual(name = "Treatment", 
+                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+    ggtitle("A") +
+    ylab("Larval body mass (mg)") + 
+    xlab("Treatments")
+
+# Total fat content
+  
+# Reorder the x-axis
+  males_health_fat$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+
+# Plot the proportion of larval body fat by treatment
+  fat <- ggplot(males_health_fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
+    geom_boxplot(outlier.shape = NA, 
+                 width = 0.5, 
+                 position = position_dodge(width = 0.1)) + 
+    geom_jitter(size = 1, 
+                alpha = 0.9) +
+    theme_bw() +
+    theme(legend.position = "none") +
+    theme(text = element_text(size = 16)) +
+    ylim(0, 6) +
+    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+    scale_color_manual(name = "Treatment", 
+                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+    ggtitle("B") +
+    ylab("Proportion of body fat") + 
+    xlab("Treatment")
+  
+# Duration
+  
+# Reorder the x-axis
+  males_health$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
+  
+# Plot larval duration by treatment
+  dur <- ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
+    geom_boxplot(outlier.shape = NA) + 
+    geom_jitter(size = 1, 
+                alpha = 0.9) +
+    theme_bw() +
+    theme(text = element_text(size = 16)) +
+    ylim(5, 20) +
+    scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
+    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+    scale_color_manual(name = "Treatment", 
+                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +             
+    ggtitle("C") +
+    ylab("Duration Larval instars II-V (days)") + 
+    xlab("Treatment")   
+  
+# Arrange health and life history plots
+  bm + fat + dur + plot_layout(ncol = 3)
+
+# Survivorship  
+  
+# Kaplan-Meier with all bees
+  ggsurvfit(s2) +
+    theme_classic() +
+    theme(legend.position = "right") +
+    theme(text = element_text(size = 16)) +
+    scale_color_manual(name = "Treatment", 
+                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+    scale_y_continuous(limits = c(0, 1)) +
+    scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+    labs(x = "Days", y = "Survival probability")
+  
+# Kaplan-Meier without bees that died within 48 h of grafting
+  ggsurvfit(s3) +
+    theme_classic() +
+    theme(legend.position = "right") +
+    theme(text = element_text(size = 16)) +
+    scale_color_manual(name = "Treatment", 
+                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+    scale_y_continuous(limits = c(0, 1)) +
+    scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+    labs(x = "Days", y = "Survival probability")
   

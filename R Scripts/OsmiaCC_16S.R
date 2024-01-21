@@ -237,6 +237,7 @@
 # Boxplot of Simpson index
   OsmiaCC_Simpson_bact <- ggplot(bactrich, aes(x = combo_treat, y = Simpson, fill = combo_treat)) + 
                             geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                            geom_jitter(size = 1, alpha = 0.9) +
                             theme_bw() +
                             theme(legend.position = "none") +
                             facet_grid(~ sample_type,
@@ -254,6 +255,7 @@
 # Boxplot of Observed richness
   OsmiaCC_Observed_bact <- ggplot(bactrich, aes(x = combo_treat, y = Observed, fill = combo_treat)) + 
                               geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                              geom_jitter(size = 1, alpha = 0.9) +
                               theme_bw() +
                               theme(legend.position = "none") +
                               facet_grid(~ sample_type,
@@ -451,11 +453,11 @@
   
 # Plot Genus for each sample
   ggplot(data = y6, aes(x = sampleID, y = Abundance, fill = Genus)) + 
-    geom_bar(stat = "identity", 
+    geom_bar(stat = "identity",
              position = "fill") + 
     scale_fill_manual(values = colors) + 
-    facet_grid(~ sample_type, 
-               scale = "free", 
+    facet_grid(~ sample_type,
+               scale = "free",
                space = "free",
                labeller = as_labeller(type_names)) +
     theme(legend.position = "right") +

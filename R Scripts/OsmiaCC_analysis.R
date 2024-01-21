@@ -12,10 +12,10 @@
 # Load necessary packages
   library(tidyverse)
   library(lubridate)
-  library(ggplot2)
+  library(ggplot2) # Version 3.4.3
   library(multcompView)
   library(ggsignif)
-  library(patchwork)
+  library(patchwork) # Version 1.1.3
   library(cowplot)
   library(knitr)
   library(dplyr)
@@ -366,7 +366,7 @@
                        labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
     ggtitle("A") +
     ylab("Larval body mass (mg)") + 
-    xlab("Treatments")
+    xlab("Treatment")
 
 # Total fat content
   
@@ -415,31 +415,40 @@
     xlab("Treatment")   
   
 # Arrange health and life history plots
-  bm + fat + dur + plot_layout(ncol = 3)
+  OsmiaCC_fitness <- bm + fat + dur + plot_layout(ncol = 3)
+  OsmiaCC_fitness
+  
+  ggsave("OsmiaCC_fitness.png", plot = OsmiaCC_fitness)
 
 # Survivorship  
   
 # Kaplan-Meier with all bees
-  ggsurvfit(s2) +
-    theme_classic() +
-    theme(legend.position = "right") +
-    theme(text = element_text(size = 16)) +
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    scale_y_continuous(limits = c(0, 1)) +
-    scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
-    labs(x = "Days", y = "Survival probability")
+  OsmiaCC_KP_all <- ggsurvfit(s2) +
+                      theme_classic() +
+                      theme(legend.position = "right") +
+                      theme(text = element_text(size = 16)) +
+                      scale_color_manual(name = "Treatment", 
+                                         values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                         labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                      scale_y_continuous(limits = c(0, 1)) +
+                      scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+                      labs(x = "Days", y = "Survival probability")
+  OsmiaCC_KP_all
+  
+  ggsave("OsmiaCC_KP_all.png", plot = OsmiaCC_KP_all)
   
 # Kaplan-Meier without bees that died within 48 h of grafting
-  ggsurvfit(s3) +
-    theme_classic() +
-    theme(legend.position = "right") +
-    theme(text = element_text(size = 16)) +
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    scale_y_continuous(limits = c(0, 1)) +
-    scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
-    labs(x = "Days", y = "Survival probability")
+  OsmiaCC_KP_48 <- ggsurvfit(s3) +
+                      theme_classic() +
+                      theme(legend.position = "right") +
+                      theme(text = element_text(size = 16)) +
+                      scale_color_manual(name = "Treatment", 
+                                         values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                         labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                      scale_y_continuous(limits = c(0, 1)) +
+                      scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+                      labs(x = "Days", y = "Survival probability")
+  OsmiaCC_KP_48
+  
+  ggsave("OsmiaCC_KP_48.png", plot = OsmiaCC_KP_48)
   

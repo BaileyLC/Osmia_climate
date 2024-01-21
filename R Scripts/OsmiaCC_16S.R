@@ -26,10 +26,10 @@
 # Import data
   seqtab.nochim <- readRDS("OsmiaCC_seqs16Sall.rds")
   taxa <- readRDS("OsmiaCC_taxa16Sall.rds")
-  meta16S_CC <- read.csv("OsmiaCC_master - 16S_all.csv")
+  meta16S_CC <- read.csv("OsmiaCC_master - 16S_worked.csv")
 
 ## Create phyloseq object ----
-  
+
 # Re-create your df
   samples.out <- rownames(seqtab.nochim)
   samples <- data.frame(meta16S_CC)
@@ -40,19 +40,19 @@
   micro_treat <- samples$micro_treat
   combo_treat <- samples$combo_treat
   sample_or_control <- samples$sample_or_control
+  sex <- samples$sex
   sampleinfo <- data.frame(extractionID = extractionID, 
                            sample_type = sample_type, 
                            sampleID = sampleID,  
                            temp_treat = temp_treat, 
                            micro_treat = micro_treat, 
                            combo_treat = combo_treat, 
-                           sample_or_control = sample_or_control)
+                           sample_or_control = sample_or_control,
+                           sex = sex)
   rownames(sampleinfo) <- samples.out
   
 # Format your data to work with phyloseq
-  ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), 
-                  sample_data(sampleinfo), 
-                  tax_table(taxa))
+  ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa))
   ps1
   
 ## Inspect & remove contaminants ----
@@ -80,7 +80,7 @@
   
 # Determine which ASVs are contaminants based on prevalence (presence/absence) higher than 0.5 in negative controls
   contamdf.prev05 <- isContaminant(ps1, method = "prevalence", neg = "is.neg", threshold = 0.5)
-
+  
 # How many contaminants are there?
   table(contamdf.prev05$contaminant)
   
@@ -89,20 +89,20 @@
   
 # Make phyloseq object of presence-absence in negative controls
   ps.neg <- prune_samples(sample_data(ps1)$sample_or_control == "control", ps1)
-
+  
 # Calculate taxa abundance in samples from sample counts
-  ps.neg.presence <- transform_sample_counts(ps.neg, function(abund) 1 * (abund > 0))
+  ps.neg.presence <- transform_sample_counts(ps.neg, function(abund) 1*(abund > 0))
   
 # Make phyloseq object of presence-absence in true positive samples
   ps.pos <- prune_samples(sample_data(ps1)$sample_or_control == "sample", ps1)
-
+  
 # Calculate taxa abundance in samples from sample counts
-  ps.pos.presence <- transform_sample_counts(ps.pos, function(abund) 1 * (abund > 0))
+  ps.pos.presence <- transform_sample_counts(ps.pos, function(abund) 1*(abund > 0))
   
 # Make data.frame of prevalence in positive and negative samples
-  df.pres <- data.frame(prevalence.pos=taxa_sums(ps.pos.presence), 
-                        prevalence.neg=taxa_sums(ps.neg.presence),
-                        contam.prev=contamdf.prev$contaminant)
+  df.pres <- data.frame(prevalence.pos = taxa_sums(ps.pos.presence), 
+                        prevalence.neg = taxa_sums(ps.neg.presence),
+                        contam.prev = contamdf.prev$contaminant)
   
 # Plot
   ggplot(data = df.pres, aes(x = prevalence.neg, y = prevalence.pos, color = contam.prev)) + 
@@ -118,12 +118,8 @@
   ps_sub <- subset_samples(ps.noncontam, sample_or_control != "control")
   ps_sub
   
-# Remove control samples used for identifying contaminants
-  ps2 <- prune_samples(sample_sums(ps_sub) != 0, ps_sub)
-  ps2
-  
 # Remove DNA from mitochondria & chloroplast
-  ps3 <- ps2 %>%
+  ps2 <- ps_sub %>%
     subset_taxa(
       Kingdom == "Bacteria" &
         Family  != "mitochondria" &
@@ -131,24 +127,32 @@
     )
   
 # Remove DNA from Eukarya, Eukaryota & Streptophyta
-  ps3 <- ps3 %>%
+  ps2 <- ps2 %>%
     subset_taxa(Kingdom != "Eukarya" &
-                  Kingdom != "Eukaryota" &
+                Kingdom != "Eukaryota" &
                   Family != "Streptophyta")
   
 # Remove DNA from Archaea
-  ps3 <- ps3 %>%
+  ps2 <- ps2 %>%
     subset_taxa(Kingdom != "Archaea")
   
 # What remains in the phyloseq object?
+  ps2
+  
+# Remove samples without any reads
+  ps3 <- prune_samples(sample_sums(ps2) != 0, ps2)
   ps3
-
+  
+# Remove samples from females
+  ps3 <- prune_samples(sample_data(ps3)$sex != "F", ps3)
+  ps3
+  
 # How many reads are in each sample? 
   sample_sums(ps3)
   
 # What is the mean number of reads in all samples?
   mean(sample_sums(ps3))
-                                             
+  
 # Add Seq to each taxa name
   taxa_names(ps3) <- paste0("Seq", seq(ntaxa(ps3)))
   
@@ -168,9 +172,9 @@
     ggtitle("Total number of reads") + 
     scale_y_log10() + 
     facet_wrap(~ type, 1, scales = "free")
-
-## Species richness ----
-                                             
+  
+## Species richness ----  
+  
 # Estimate Shannon, Simpson & observed richness
   bactrich <- estimate_richness(ps3, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
   
@@ -190,16 +194,16 @@
   bactrich[bactrich == 0] <- NA
   bactrich <- bactrich[complete.cases(bactrich), ]
   
-# Examine interactive effects of temperature and microbiome treatments on Shannon richness
-  mod1 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+# Examine interactive effects of temperature and microbiome treatments on Shannon diversity
+  mod1 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|nesting_tube, data = bactrich)
   anova(mod1)
   
-# Examine interactive effects of temperature and microbiome treatments on Simpson richness
-  mod2 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+# Examine interactive effects of temperature and microbiome treatments on Simpson diversity
+  mod2 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|nesting_tube, data = bactrich)
   anova(mod2)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod3 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+  mod3 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|nesting_tube, data = bactrich)
   anova(mod3)
   
 # Reorder x-axis
@@ -207,43 +211,62 @@
 
 # New names for facet_grid
   type_names <- c('final provision' = "provisions with bee",
-                  'provision w/o bee' = "provisions without bee")
+                  'provision w/o bee' = "provisions without bee", 
+                  'initial provision' = "initial provisions")
+
+# Boxplot of Shannon index
+  OsmiaCC_Shannon_bact <- ggplot(bactrich, aes(x = combo_treat, y = Shannon, fill = combo_treat)) + 
+                            geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                            geom_jitter(size = 1, alpha = 0.9) +
+                            theme_bw() +
+                            theme(legend.position = "none") +
+                            theme(panel.grid.major = element_blank(),
+                                  panel.grid.minor = element_blank()) +
+                            facet_grid(~ sample_type,
+                                       scale = "free",
+                                       space = "free",
+                                       labeller = as_labeller(type_names)) +
+                            scale_fill_manual(name = "Treatment", 
+                                              values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                              labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                            labs(title = "A") +
+                            xlab("Treatment") +
+                            ylab("Shannon index")
+  OsmiaCC_Shannon_bact
   
-# Boxplot of Shannon richness
-  ggplot(bactrich, aes(x = combo_treat, y = Shannon, fill = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-    theme_bw() +
-    facet_grid(~ sample_type, scale = "free", space = "free", labeller = as_labeller(type_names)) +
-    scale_fill_manual(name = "Treatment", 
-                      values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                      labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    labs(title = "") + 
-    xlab("Treatment") +
-    ylab("Shannon richness")
+# Boxplot of Simpson index
+  OsmiaCC_Simpson_bact <- ggplot(bactrich, aes(x = combo_treat, y = Simpson, fill = combo_treat)) + 
+                            geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                            theme_bw() +
+                            theme(legend.position = "none") +
+                            facet_grid(~ sample_type,
+                                       scale = "free",
+                                       space = "free",
+                                       labeller = as_labeller(type_names)) +
+                            scale_fill_manual(name = "Treatment", 
+                                              values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                              labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                            labs(title = "A") + 
+                            xlab("Treatment") +
+                            ylab("Simpson index")
+  OsmiaCC_Simpson_bact
   
-# Boxplot of Simpson richness
-  ggplot(bactrich, aes(x = combo_treat, y = Simpson, fill = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-    theme_bw() +
-    facet_grid(~ sample_type, scale = "free", space = "free", labeller = as_labeller(type_names)) +
-    scale_fill_manual(name = "Treatment", 
-                      values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                      labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    labs(title = "") + 
-    xlab("Treatment") +
-    ylab("Simpson richness")
-  
-# Boxplot of observed richness
-  ggplot(bactrich, aes(x = combo_treat, y = Observed, fill = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-    theme_bw() +
-    facet_grid(~ sample_type, scale = "free", space = "free", labeller = as_labeller(type_names)) +
-    scale_fill_manual(name = "Treatment",
-                      values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                      labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    labs(title = "") + 
-    xlab("Treatment") +
-    ylab("Observed richness")
+# Boxplot of Observed richness
+  OsmiaCC_Observed_bact <- ggplot(bactrich, aes(x = combo_treat, y = Observed, fill = combo_treat)) + 
+                              geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                              theme_bw() +
+                              theme(legend.position = "none") +
+                              facet_grid(~ sample_type,
+                                         scale = "free",
+                                         space = "free",
+                                         labeller = as_labeller(type_names)) +
+                              scale_fill_manual(name = "Treatment",
+                                                values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                                labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                              xlab("Treatment") +
+                              ylab("Observed richness") +
+                              ggtitle("A")
+  OsmiaCC_Observed_bact
   
 ## Rarefaction ----
   
@@ -251,16 +274,55 @@
   tab <- otu_table(ps3)
   class(tab) <- "matrix"
   tab <- t(tab)
-  rare <- rarecurve(tab, step = 20, label = FALSE)
+  rare_tidy_bact <- rarecurve(tab, step = 20, label = FALSE)
   
-# Rarefy
+# Save rarefaction data as a "tidy" df
+  rare_tidy_bact <- rarecurve(tab, label = FALSE, tidy = TRUE)
+  
+# Plot rarefaction curve
+  rare_bact <- ggplot(rare_tidy_bact, aes(x = Sample, y = Species, group = Site)) +
+                  geom_line() +
+                  theme_bw() +
+                  theme(panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank()) +
+                  labs(title = "A") + 
+                  xlab("Number of reads") +
+                  ylab("Number of species")
+  rare_bact
+  
+# Set seed and rarefy
   set.seed(1234)
-  rareps <- rarefy_even_depth(ps3, sample.size = 20)
+  rareps <- rarefy_even_depth(ps3, sample.size = 26)
   
-# Perform PERMANOVA to test effects of treatments on bacterial community composition
+# Create a distance matrix using Bray Curtis dissimilarity
   bact_bray <- phyloseq::distance(rareps, method = "bray")
+  
+# Convert to data frame
   samplebact <- data.frame(sample_data(rareps))
-  adonis2(bact_bray ~ temp_treat*micro_treat, data = samplebact)
+  
+# Perform the PERMANOVA to test effects of treatment on bacterial community composition  
+  bact_perm <- adonis2(bact_bray ~ temp_treat*micro_treat, data = samplebact)
+  bact_perm
+  
+## Test for homogeneity of multivariate dispersion ----
+  
+# Calculate the average distance of group members to the group centroid
+  disp_bact <- betadisper(bact_bray, samplebact$combo_treat)
+  disp_bact
+  
+# Do any of the group dispersions differ?
+  disp_bact_an <- anova(disp_bact)
+  disp_bact_an
+  
+# Which group dispersions differ?
+  disp_bact_ttest <- permutest(disp_bact, 
+                               control = permControl(nperm = 999),
+                               pairwise = TRUE)
+  disp_bact_ttest
+  
+# Which group dispersions differ?
+  disp_bact_tHSD <- TukeyHSD(disp_bact)
+  disp_bact_tHSD  
   
 ## Ordination ----
   
@@ -271,15 +333,16 @@
   ord.pcoa.bray <- ordinate(ps.prop, method = "PCoA", distance = "bray")
   
 # Plot ordination
-  plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
-    theme_bw() +
-    theme(text = element_text(size = 16)) +
-    theme(legend.justification = "left", 
-          legend.title = element_text(size = 16, colour = "black"), 
-          legend.text = element_text(size = 14, colour = "black")) + 
-    geom_point(size = 3) +
-    scale_color_manual(values = c( "#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
-    labs(title = "PCoA: Bacteria", color = "Treatment", shape = "Sample Type")
+  OsmiaCC_PCoA_16S <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
+                        theme_bw() +
+                        theme(legend.position = "none") +
+                        theme(text = element_text(size = 16)) +
+                        theme(legend.justification = "left", 
+                              legend.title = element_text(size = 16, colour = "black"), 
+                              legend.text = element_text(size = 14, colour = "black")) + 
+                        geom_point(size = 3) +
+                        scale_color_manual(values = c("#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
+                        labs(title = "A", color = "Treatment", shape = "Sample Type")
   
 ## Stacked community plot ----
   
@@ -296,7 +359,6 @@
   y3 <- psmelt(y2)
   y3$Family <- as.character(y3$Family)
   y3$Family[y3$Abundance < 0.01] <- "Family < 1% abund."
-  write.csv(y3, file = "y3.csv")
   y3$Family <- as.factor(y3$Family)
   head(y3)
   
@@ -308,25 +370,27 @@
                   'provision w/o bee' = "provisions without bee")
   
 # Plot treatment by Family
-  ggplot(data = y3, aes(x = combo_treat, y = Abundance, fill = Family)) + 
-    geom_bar(stat = "identity", position = "fill") + 
-    scale_fill_manual(values = colors) + 
-    facet_grid(~ sample_type, scale = "free", 
-               space = "free", 
-               labeller = as_labeller(type_names)) +
-    theme(legend.position = "right") +
-    ylab("Relative abundance") + 
-    ylim(0, 1.0) +
-    xlab("Treatment") +
-    theme_bw() + 
-    theme(text = element_text(size = 16)) +
-    theme(panel.grid.major = element_blank(), 
-          panel.grid.minor = element_blank()) + 
-    theme(legend.justification = "left", 
-          legend.title = element_text(size = 16, colour = "black"), 
-          legend.text = element_text(size = 14, colour = "black")) + 
-    guides(fill = guide_legend(ncol = 2)) +
-    ggtitle("Bacteria")
+  OsmiaCC_fam_relabund_bact <- ggplot(data = y3, aes(x = combo_treat, y = Abundance, fill = Family)) + 
+                                  geom_bar(stat = "identity", position = "fill") + 
+                                  scale_fill_manual(values = colors) + 
+                                  facet_grid(~ sample_type,
+                                            scale = "free",
+                                            space = "free",
+                                            labeller = as_labeller(type_names)) +
+                                  theme(legend.position = "right") +
+                                  ylab("Relative abundance") + 
+                                  ylim(0, 1.0) +
+                                  xlab("Treatment") +
+                                  theme_bw() + 
+                                  theme(text = element_text(size = 16)) +
+                                  theme(panel.grid.major = element_blank(), 
+                                        panel.grid.minor = element_blank()) + 
+                                  theme(legend.justification = "left", 
+                                        legend.title = element_text(size = 16, colour = "black"), 
+                                        legend.text = element_text(size = 14, colour = "black")) + 
+                                  guides(fill = guide_legend(ncol = 2)) +
+                                  ggtitle("A")
+  OsmiaCC_fam_relabund_bact
   
 # Plot Family for each sample
   ggplot(data = y3, aes(x = sampleID, y = Abundance, fill = Family)) + 
@@ -338,7 +402,7 @@
     theme(legend.position = "right") +
     ylab("Relative abundance") + 
     ylim(0, 1.0) +
-    xlab("Treatment") +
+    xlab("Sample ID") +
     theme_bw() + 
     theme(text = element_text(size = 16)) +
     theme(panel.grid.major = element_blank(), 
@@ -348,8 +412,68 @@
           legend.text = element_text(size = 14, colour = "black")) + 
     guides(fill = guide_legend(ncol = 2)) +
     ggtitle("Bacteria")
+  
+# Sort data by Genus
+  y4 <- tax_glom(rareps, taxrank = 'Genus') # agglomerate taxa
+  y5 <- transform_sample_counts(y4, function(x) x/sum(x))
+  y6 <- psmelt(y5)
+  y6$Genus <- as.character(y6$Genus)
+  y6$Genus[y6$Abundance < 0.01] <- "Genera < 1% abund."
+  write.csv(y6, file = "y6.csv")
+  y6$Genus <- as.factor(y9$Genus)
+  head(y6)
+  
+# Reorder x-axis  
+  y6$combo_treat <- factor(y6$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot Genus by treatment
+  OsmiaCC_gen_relabund_fungi <- ggplot(data = y6, aes(x = combo_treat, y = Abundance, fill = Genus)) + 
+                                    geom_bar(stat = "identity", position = "fill") + 
+                                    scale_fill_manual(values = colors) + 
+                                    facet_grid(~ sample_type, 
+                                               scale = "free", 
+                                               space = "free",
+                                               labeller = as_labeller(type_names)) +
+                                    theme(legend.position = "right") +
+                                    ylab("Relative abundance") + 
+                                    ylim(0, 1.0) +
+                                    xlab("Treatment") +
+                                    theme_bw() + 
+                                    theme(text = element_text(size = 16)) +
+                                    theme(panel.grid.major = element_blank(), 
+                                          panel.grid.minor = element_blank()) + 
+                                    theme(legend.justification = "left", 
+                                          legend.title = element_text(size = 16, colour = "black"), 
+                                          legend.text = element_text(size = 14, colour = "black")) + 
+                                    guides(fill = guide_legend(ncol = 2)) +
+                                    ggtitle("A")
+  OsmiaCC_gen_relabund_fungi
+  
+# Plot Genus for each sample
+  ggplot(data = y6, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+    geom_bar(stat = "identity", 
+             position = "fill") + 
+    scale_fill_manual(values = colors) + 
+    facet_grid(~ sample_type, 
+               scale = "free", 
+               space = "free",
+               labeller = as_labeller(type_names)) +
+    theme(legend.position = "right") +
+    ylab("Relative abundance") + 
+    ylim(0, 1.0) +
+    xlab("Sample ID") +
+    theme_bw() + 
+    theme(text = element_text(size = 16)) +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) + 
+    theme(legend.justification = "left", 
+          legend.title = element_text(size = 16, colour = "black"), 
+          legend.text = element_text(size = 14, colour = "black")) + 
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+    guides(fill = guide_legend(ncol = 2)) +
+    ggtitle("Bacteria")
 
-  ## Differential abundance ----
+## Differential abundance ----
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
 
 # Convert from a phyloseq to a deseq obj

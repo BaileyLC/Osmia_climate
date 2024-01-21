@@ -10,25 +10,25 @@
   setwd("~/Downloads")
 
 # Load necessary packages
-  library(tidyverse)
-  library(lubridate)
+  library(tidyverse) # Version 2.0.0
+  library(lubridate) # Version 1.9.3
   library(ggplot2) # Version 3.4.3
-  library(multcompView)
-  library(ggsignif)
+  library(multcompView) # Version 0.1-9
+  library(ggsignif) # Version 0.6.4
   library(patchwork) # Version 1.1.3
-  library(cowplot)
-  library(knitr)
-  library(dplyr)
-  library(survival)
-  library(tibble)
-  library(ggsurvfit)
-  library(gtsummary)
-  library(car)
-  library(emmeans)
-  library(stats)
-  library(FSA)
-  library(lmtest)
-  library(survMisc)
+  library(cowplot) # Version 1.1.1
+  library(knitr) # Version 1.45
+  library(dplyr) # Version 1.1.3
+  library(survival) # Version 3.5-7
+  library(tibble) # Version 3.2.1
+  library(ggsurvfit) # Version 1.0.0
+  library(gtsummary) # Version 1.7.2
+  library(car) # Version 2.1-2
+  library(emmeans) # Version 1.8.9
+  library(stats) # Version 4.3.1
+  library(FSA) # Version 0.9.5
+  library(lmtest) # Version 0.9-40
+  library(survMisc) # Version 0.5.6
 
 ## Import data ----
 

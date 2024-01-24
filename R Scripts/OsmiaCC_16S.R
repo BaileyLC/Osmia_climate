@@ -54,6 +54,9 @@
 # Format your data to work with phyloseq
   ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa))
   ps1
+
+# Summarize the phyloseq obj contents before processing
+  summarize_phyloseq(ps1)
   
 ## Inspect & remove contaminants ----
 # Resource: https://benjjneb.github.io/decontam/vignettes/decontam_intro.html
@@ -152,7 +155,10 @@
   
 # What is the mean number of reads in all samples?
   mean(sample_sums(ps3))
-  
+
+# Summarize the phyloseq obj contents after processing
+  summarize_phyloseq(ps3) 
+                                             
 # Add Seq to each taxa name
   taxa_names(ps3) <- paste0("Seq", seq(ntaxa(ps3)))
   

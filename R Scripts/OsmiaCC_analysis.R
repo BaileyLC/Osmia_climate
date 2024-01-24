@@ -12,6 +12,8 @@
 # Load necessary packages
   library(tidyverse) # Version 2.0.0
   library(lubridate) # Version 1.9.3
+  library(nlme) # Version #3.1-164
+  library(effects) # Version 4.2-2
   library(ggplot2) # Version 3.4.3
   library(multcompView) # Version 0.1-9
   library(ggsignif) # Version 0.6.4
@@ -48,7 +50,7 @@
   males_duration <- duration[duration$sex == "M", ]
   males_mortality <- mortality[mortality$sex == "M", ]
 
-## Analysis of temperature treatment data ----
+## Temperature treatments ----
   
 # Format date column
   all_sensors$Date <- as.Date(all_sensors$Date, format = "%Y-%m-%d")
@@ -75,41 +77,75 @@
                        sec.axis = sec_axis(trans = ~.*1, name = "Relative Humidity (%)")) +
     scale_color_manual(values = c("#C62828",  "#616161", "#1565C0"))
 
-## Larval body mass ----
+# Set Sensor reference group as ambient  
+  all_sensors <- all_sensors %>% mutate(Sensor = relevel(Sensor, ref = "Ambient"))
+  levels(all_sensors$Sensor)
   
+# Linear mixed effects model to test the effectiveness of temperature treatments using date as a random effect
+# Resources: https://bookdown.org/ronsarafian/IntrotoDS/lme.html, https://www.crumplab.com/psyc7709_2019/book/docs/a-tutorial-for-using-the-lme-function-from-the-nlme-package-.html
+  temp_lme <- lme(Temp ~ Sensor, random = ~1|Date, data = all_sensors)
+  summary(temp_lme)
+  
+# Display estimated marginal means for each pairwise comparison using Tukey's HSD
+  emmeans(temp_lme, list(pairwise ~ Sensor), adjust = "tukey")
+  
+# Display estimate, SE, and CI for each Sensor
+  as.data.frame(effect("Sensor", temp_lme))
+  
+# Linear mixed effects model to test ensure there was no difference in humidity across incubators using date as a random effect
+  humidity_lme <- lme(Humidity ~ Sensor, random = ~1|Date, data = all_sensors)
+  summary(humidity_lme)
+  
+# Display estimated marginal means for each pairwise comparison using Tukey's HSD
+  emmeans(humidity_lme, list(pairwise ~ Sensor), adjust = "tukey")
+
+# Display estimate, SE, and CI for each Sensor
+  as.data.frame(effect("Sensor", humidity_lme))
+
+## Larval body mass ----
+
 # Subset df to include just treatments and response variable (wet body mass)
   males_health_mass <- males_health %>%
-    select(bee, temp_treat, micro_treat, combo_treat, wet_mass_mg)
+    select(bee, temp_treat, micro_treat, combo_treat, graft_stage, wet_mass_mg)
   
-# Determine sample sizes by sex & treatment
+# Determine sample sizes of males by treatment
   males_health_mass_ss <- males_health_mass %>%
     group_by(combo_treat) %>%
     tally()
   males_health_mass_ss
   
-# ANOVA: Do any of the group means differ?
-  males_mass_aov <- aov(wet_mass_mg ~ temp_treat * micro_treat, data = males_health_mass)
+# ANOVA: Do any of the group means differ? Model w/ interaction
+  mass_aov1 <- aov(wet_mass_mg ~ temp_treat * micro_treat, data = males_health_mass)
 
+# ANOVA: Do any of the group means differ? Additive model
+  mass_aov2 <- aov(wet_mass_mg ~ temp_treat + micro_treat, data = males_health_mass)
+  
+# Model comparison
+  anova(mass_aov1, mass_aov2)
+  
 # Check for normality
-  qqPlot(males_mass_aov$residuals, id = FALSE)  
+  qqPlot(mass_aov2$residuals, id = FALSE)
   
 # Shapiro-Wilk normality test
-  shapiro.test(males_mass_aov$residuals)
+  shapiro.test(mass_aov2$residuals)
   
 # Levene's test to assess for equal variance
   leveneTest(males_health_mass$wet_mass_mg ~ males_health_mass$combo_treat)
   
+# Pearson's chi-squared to test for independence
+  chisq.test(males_health_mass$temp_treat, males_health_mass$micro_treat)
+
 # ANOVA output
-  summary(males_mass_aov)
+  summary(mass_aov2)
   
 # Post-hoc: Which group means differ?  
-  mass_tukey <- TukeyHSD(males_mass_aov)
+  mass_tukey <- TukeyHSD(mass_aov2)
   mass_tukey
   
 # Linear contrasts
 # Resource: https://bookdown.org/pingapang9/linear_models_bookdown/chap-contrasts.html#contrasts-and-dummy-coding
 
-# What is the difference in wet body mass between sterile vs natural treatments? Dummy coding
+# What is the difference in wet body mass between treatments? Dummy coding
 
 # Ensure micro_treat and temp_treat are factors
   males_health_mass$micro_treat <- as.factor(males_health_mass$micro_treat)
@@ -122,24 +158,34 @@
 # Set temp_treat reference group as ambient  
   males_health_mass <- males_health_mass %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
   levels(males_health_mass$temp_treat)
-
-# Run linear model
-  lm_mass1 <- lm(wet_mass_mg ~ micro_treat + temp_treat, data = males_health_mass)
-  summary(lm_mass1)
+  
+# Create a contrast matrix for micro_treat and temp_treat
+  contrasts(males_health_mass$micro_treat)
+  contrasts(males_health_mass$temp_treat)
+  
+# Linear model for the additive effects of microbiome and temperature treatments on larval body mass
+  lm_mass <- lme(wet_mass_mg ~ micro_treat + temp_treat, random = ~1|graft_stage, data = males_health_mass)
+  summary(lm_mass)
 
 # Display estimated marginal means for each pairwise comparison grouped by temperature treatment
-  emmeans(lm_mass1, "micro_treat", by = "temp_treat")
+  emmeans(lm_mass, "micro_treat", by = "temp_treat")
 
 # Display p-values for pairwise comparisons grouped by temperature treatment
-  pairs(emmeans(lm_mass1, "micro_treat", by = "temp_treat"))
-
+  pairs(emmeans(lm_mass, "micro_treat", by = "temp_treat"))
+  
+# Display estimated marginal means for each pairwise comparison grouped by microbiome treatment
+  emmeans(lm_mass, "temp_treat", by = "micro_treat")
+  
+# Display p-values for pairwise comparisons grouped by microbiome treatment
+  pairs(emmeans(lm_mass, "temp_treat", by = "micro_treat"))
+  
 ## Proportion of larval body fat ----
 
 # Subset df to include just treatments and response variable (wet body mass)
   males_health_fat <- males_health %>%
-    select(bee, temp_treat, micro_treat, combo_treat, prop_body_fat)
+    select(bee, graft_stage, temp_treat, micro_treat, combo_treat, prop_body_fat)
   
-# Determine sample sizes by sex & treatment
+# Determine sample sizes of males by treatment
   males_health_fat_ss <- males_health_fat %>%
     group_by(combo_treat) %>%
     tally()
@@ -157,6 +203,9 @@
 # Levene's test to assess for equal variance
   leveneTest(males_health_fat$prop_body_fat ~ males_health_fat$combo_treat)
   
+# Pearson's chi-squared to test for independence
+  chisq.test(males_health_fat$temp_treat, males_health_fat$micro_treat)
+  
 # ANOVA output  
   summary(males_fat_aov)
 
@@ -166,7 +215,7 @@
 
 # Linear contrasts
   
-# What is the difference in total body fat between sterile vs natural treatments? Dummy coding
+# What is the difference in total body fat between treatments? Dummy coding
   
 # Ensure micro_treat and temp_treat are factors
   males_health_fat$micro_treat <- as.factor(males_health_fat$micro_treat)
@@ -180,19 +229,29 @@
   males_health_fat <- males_health_fat %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
   levels(males_health_mass$temp_treat)
   
+# Create a contrast matrix for micro_treat and temp_treat
+  contrasts(males_health_fat$micro_treat)
+  contrasts(males_health_fat$temp_treat)
+  
 # Run linear model
-  lm_mass2 <- lm(prop_body_fat ~ micro_treat + temp_treat, data = males_health_fat)
-  summary(lm_mass2)
+  lm_fat <- lme(prop_body_fat ~ micro_treat + temp_treat, random = ~1|graft_stage, data = males_health_fat)
+  summary(lm_fat)
   
 # Display estimated marginal means for each pairwise comparison grouped by temperature treatment
-  emmeans(lm_mass2, "micro_treat", by = "temp_treat")
+  emmeans(lm_fat, "micro_treat", by = "temp_treat")
   
 # Display p-values for pairwise comparisons grouped by temperature treatment
-  pairs(emmeans(lm_mass2, "micro_treat", by = "temp_treat"))
+  pairs(emmeans(lm_fat, "micro_treat", by = "temp_treat"))
 
+# Display estimated marginal means for each pairwise comparison grouped by microbiome treatment
+  emmeans(lm_fat, "temp_treat", by = "micro_treat")
+  
+# Display p-values for pairwise comparisons grouped by microbiome treatment
+  pairs(emmeans(lm_fat, "temp_treat", by = "micro_treat"))  
+  
 ## Duration of developmental stages ----
 
-# Determine sample sizes by sex & treatment
+# Determine sample sizes of males by treatment
   males_duration_ss <- males_health %>%
     group_by(combo_treat) %>%
     tally()
@@ -218,10 +277,18 @@
 
 ## Mortality ----
 
-# Table of sample size per treatment
+# Determine sample sizes of males by treatment
   males_mortality_ss <- males_mortality %>%
     group_by(combo_treat) %>%
     tally()
+  males_mortality_ss
+  
+# Add sample sizes per treatment
+  males_mortality_ss$N <- rep(30, times = 6)
+  males_mortality_ss
+    
+# Add column and calculate percent mortality   
+  males_mortality_ss$per_mort <- males_mortality_ss$n/males_mortality_ss$N
   males_mortality_ss
 
 ## Survivorship analysis ----
@@ -275,7 +342,7 @@
     filter(status == 1) %>%
     group_by(temp_treat) %>%
     summarize(median_surv = median(total_surv_days))
-  
+
 # Display median survival time by micro_treat
   males_duration %>%
     filter(status == 1) %>%
@@ -343,6 +410,33 @@
   
 ## Plots ----  
 
+# Temperature treatments
+  
+# Format date column
+  all_sensors$Date <- as.Date(all_sensors$Date, format = "%Y-%m-%d")
+  
+# Remove dates after July 4, when the experiment stopped
+  all_sensors <- all_sensors %>% filter(Date < '2023-07-04')
+  
+# Combine date and time columns
+  all_sensors$DateTime <- as.POSIXct(paste(all_sensors$Date, all_sensors$Time),
+                                     format = "%Y-%m-%d %I:%M:%S %p")  
+  
+# Manually order legend
+  all_sensors$Sensor <- factor(all_sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
+  
+# Plot temperature & humidity
+  ggplot(all_sensors, aes(x = DateTime, color = Sensor, group = Sensor)) +
+    geom_line(aes(y = Temp, linetype = "Temperature")) + 
+    geom_line(aes(y = Humidity, linetype = "Humidity")) +
+    theme_bw() +
+    theme(legend.title = element_blank()) +
+    theme(text = element_text(size = 16)) +
+    xlab("Date") +
+    scale_y_continuous(name = "Temperature (°C)", 
+                       sec.axis = sec_axis(trans = ~.*1, name = "Relative Humidity (%)")) +
+    scale_color_manual(values = c("#C62828",  "#616161", "#1565C0"))
+  
 # Body mass
 
 # Reorder the x-axis
@@ -350,23 +444,23 @@
   
 # Plot larval body mass by treatment
   bm <- ggplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg,color = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA,
-                 width = 0.5,
-                 position = position_dodge(width = 0.1)) + 
-    geom_jitter(size = 1, 
-                alpha = 0.9) +
-    theme_bw() +
-    theme(legend.position = "none") + 
-    theme(text = element_text(size = 16)) +
-    ylim(0, 20) +
-    scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
-    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    ggtitle("A") +
-    ylab("Larval body mass (mg)") + 
-    xlab("Treatment")
+            geom_boxplot(outlier.shape = NA,
+                         width = 0.5,
+                         position = position_dodge(width = 0.1)) + 
+            geom_jitter(size = 1, 
+                        alpha = 0.9) +
+            theme_bw() +
+            theme(legend.position = "none") + 
+            theme(text = element_text(size = 16)) +
+            ylim(0, 20) +
+            scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
+            scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+            scale_color_manual(name = "Treatment", 
+                               values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                               labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+            ggtitle("A") +
+            ylab("Larval body mass (mg)") + 
+            xlab("Treatment")
 
 # Total fat content
   
@@ -375,22 +469,22 @@
 
 # Plot the proportion of larval body fat by treatment
   fat <- ggplot(males_health_fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA, 
-                 width = 0.5, 
-                 position = position_dodge(width = 0.1)) + 
-    geom_jitter(size = 1, 
-                alpha = 0.9) +
-    theme_bw() +
-    theme(legend.position = "none") +
-    theme(text = element_text(size = 16)) +
-    ylim(0, 6) +
-    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-    ggtitle("B") +
-    ylab("Proportion of body fat") + 
-    xlab("Treatment")
+            geom_boxplot(outlier.shape = NA, 
+                         width = 0.5, 
+                         position = position_dodge(width = 0.1)) + 
+            geom_jitter(size = 1, 
+                        alpha = 0.9) +
+            theme_bw() +
+            theme(legend.position = "none") +
+            theme(text = element_text(size = 16)) +
+            ylim(0, 6) +
+            scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+            scale_color_manual(name = "Treatment", 
+                               values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                               labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+            ggtitle("B") +
+            ylab("Proportion of body fat") + 
+            xlab("Treatment")
   
 # Duration
   
@@ -399,20 +493,20 @@
   
 # Plot larval duration by treatment
   dur <- ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
-    geom_boxplot(outlier.shape = NA) + 
-    geom_jitter(size = 1, 
-                alpha = 0.9) +
-    theme_bw() +
-    theme(text = element_text(size = 16)) +
-    ylim(5, 20) +
-    scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
-    scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
-    scale_color_manual(name = "Treatment", 
-                       values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                       labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +             
-    ggtitle("C") +
-    ylab("Duration Larval instars II-V (days)") + 
-    xlab("Treatment")   
+            geom_boxplot(outlier.shape = NA) + 
+            geom_jitter(size = 1, 
+                        alpha = 0.9) +
+            theme_bw() +
+            theme(text = element_text(size = 16)) +
+            ylim(5, 20) +
+            scale_fill_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) +
+            scale_x_discrete(labels = c("CS", "CN", "AS", "AN", "WS", "WN")) + 
+            scale_color_manual(name = "Treatment", 
+                               values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                               labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +             
+            ggtitle("C") +
+            ylab("Duration Larval instars II-V (days)") + 
+            xlab("Treatment")   
   
 # Arrange health and life history plots
   OsmiaCC_fitness <- bm + fat + dur + plot_layout(ncol = 3)

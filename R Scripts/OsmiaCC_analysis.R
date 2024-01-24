@@ -352,6 +352,9 @@
 # Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
   survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
 
+# Display other results comparing survival times between groups. See ?comp for notations.
+  comp(ten(s2))
+
 # Cox regression model to compare survival times between groups (allows risk of death to vary across time)
   cox_model1 <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
   summary(cox_model1)
@@ -396,7 +399,10 @@
   
 # Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
   survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
-  
+
+# Display other results comparing survival times between groups. See ?comp for notations.
+  comp(ten(s3))
+
 # Cox regression model to compare survival times between groups (allows risk of death to vary across time)
   cox_model2 <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
   summary(cox_model2)

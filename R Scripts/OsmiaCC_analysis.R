@@ -12,7 +12,7 @@
 # Load necessary packages
   library(tidyverse) # Version 2.0.0
   library(lubridate) # Version 1.9.3
-  library(nlme) # Version #3.1-164
+  library(lme4) # Version 1.1-35.1
   library(effects) # Version 4.2-2
   library(ggplot2) # Version 3.4.3
   library(multcompView) # Version 0.1-9
@@ -27,8 +27,6 @@
   library(gtsummary) # Version 1.7.2
   library(car) # Version 2.1-2
   library(emmeans) # Version 1.8.9
-  library(stats) # Version 4.3.1
-  library(FSA) # Version 0.9.5
   library(lmtest) # Version 0.9-40
   library(survMisc) # Version 0.5.6
 
@@ -42,7 +40,7 @@
 
 ## Clean data ----
 
-# Remove rows with no data
+# Remove rows with incomplete data
   health <- na.omit(health)
 
 # Subset to create dfs by sex
@@ -50,7 +48,7 @@
   males_duration <- duration[duration$sex == "M", ]
   males_mortality <- mortality[mortality$sex == "M", ]
 
-## Temperature treatments ----
+## Climate treatments ----
   
 # Format date column
   all_sensors$Date <- as.Date(all_sensors$Date, format = "%Y-%m-%d")
@@ -81,73 +79,34 @@
   all_sensors <- all_sensors %>% mutate(Sensor = relevel(Sensor, ref = "Ambient"))
   levels(all_sensors$Sensor)
   
-# Linear mixed effects model to test the effectiveness of temperature treatments using date as a random effect
-# Resources: https://bookdown.org/ronsarafian/IntrotoDS/lme.html, https://www.crumplab.com/psyc7709_2019/book/docs/a-tutorial-for-using-the-lme-function-from-the-nlme-package-.html
-  temp_lme <- lme(Temp ~ Sensor, random = ~1|Date, data = all_sensors)
-  summary(temp_lme)
+# LMM of temperature using date as a random intercept (accounts for repeated measures)
+  gau_temp <- lme4::lmer(Temp ~ Sensor + (1|Date), data = all_sensors)
+  summary(gau_temp)
   
-# Display estimated marginal means for each pairwise comparison using Tukey's HSD
-  emmeans(temp_lme, list(pairwise ~ Sensor), adjust = "tukey")
-  
-# Display estimate, SE, and CI for each Sensor
-  as.data.frame(effect("Sensor", temp_lme))
-  
-# Linear mixed effects model to test ensure there was no difference in humidity across incubators using date as a random effect
-  humidity_lme <- lme(Humidity ~ Sensor, random = ~1|Date, data = all_sensors)
-  summary(humidity_lme)
-  
-# Display estimated marginal means for each pairwise comparison using Tukey's HSD
-  emmeans(humidity_lme, list(pairwise ~ Sensor), adjust = "tukey")
+# Pairwise comparisons with sidak adjustment
+  emmeans(gau_temp, list(pairwise ~ Sensor), adjust = "tukey")
 
-# Display estimate, SE, and CI for each Sensor
-  as.data.frame(effect("Sensor", humidity_lme))
+# LMM of humidity using date as a random intercept (accounts for repeated measures)  
+  gau_humidity <- lme4::lmer(Humidity ~ Sensor + (1|Date), data = all_sensors)
+  summary(gau_humidity)
+  
+# Pairwise comparisons with sidak adjustment
+  emmeans(gau_humidity, list(pairwise ~ Sensor), adjust = "tukey")
 
 ## Larval body mass ----
 
-# Subset df to include just treatments and response variable (wet body mass)
+# Subset df to include just treatments and response variable
   males_health_mass <- males_health %>%
     select(bee, temp_treat, micro_treat, combo_treat, graft_stage, wet_mass_mg)
   
-# Determine sample sizes of males by treatment
-  males_health_mass_ss <- males_health_mass %>%
+# Determine sample sizes, mean, and sd of males by treatment
+  males_health_mass %>%
     group_by(combo_treat) %>%
-    tally()
-  males_health_mass_ss
-  
-# ANOVA: Do any of the group means differ? Model w/ interaction
-  mass_aov1 <- aov(wet_mass_mg ~ temp_treat * micro_treat, data = males_health_mass)
+    summarise(N = n(),
+              Mean = mean(wet_mass_mg), 
+              SD = sd(wet_mass_mg))
 
-# ANOVA: Do any of the group means differ? Additive model
-  mass_aov2 <- aov(wet_mass_mg ~ temp_treat + micro_treat, data = males_health_mass)
-  
-# Model comparison
-  anova(mass_aov1, mass_aov2)
-  
-# Check for normality
-  qqPlot(mass_aov2$residuals, id = FALSE)
-  
-# Shapiro-Wilk normality test
-  shapiro.test(mass_aov2$residuals)
-  
-# Levene's test to assess for equal variance
-  leveneTest(males_health_mass$wet_mass_mg ~ males_health_mass$combo_treat)
-  
-# Pearson's chi-squared to test for independence
-  chisq.test(males_health_mass$temp_treat, males_health_mass$micro_treat)
-
-# ANOVA output
-  summary(mass_aov2)
-  
-# Post-hoc: Which group means differ?  
-  mass_tukey <- TukeyHSD(mass_aov2)
-  mass_tukey
-  
-# Linear contrasts
-# Resource: https://bookdown.org/pingapang9/linear_models_bookdown/chap-contrasts.html#contrasts-and-dummy-coding
-
-# What is the difference in wet body mass between treatments? Dummy coding
-
-# Ensure micro_treat and temp_treat are factors
+# Change micro_treat and temp_treat to factors
   males_health_mass$micro_treat <- as.factor(males_health_mass$micro_treat)
   males_health_mass$temp_treat <- as.factor(males_health_mass$temp_treat)
   
@@ -159,65 +118,39 @@
   males_health_mass <- males_health_mass %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
   levels(males_health_mass$temp_treat)
   
-# Create a contrast matrix for micro_treat and temp_treat
-  contrasts(males_health_mass$micro_treat)
-  contrasts(males_health_mass$temp_treat)
+# LMM of larval biomass using grafting stage as a random intercept
+  gau_mass <- lme4::lmer(wet_mass_mg ~ micro_treat * temp_treat + (1|graft_stage), data = males_health_mass)
+ 
+# Check for normality with Q-Q plots and the Shapiro-Wilks test
+  qqnorm(resid(gau_mass, type = "pearson"))
+  qqline(resid(gau_mass, type = "pearson"))
+  shapiro.test(resid(gau_mass))
   
-# Linear model for the additive effects of microbiome and temperature treatments on larval body mass
-  lm_mass <- lme(wet_mass_mg ~ micro_treat + temp_treat, random = ~1|graft_stage, data = males_health_mass)
-  summary(lm_mass)
-
-# Display estimated marginal means for each pairwise comparison grouped by temperature treatment
-  emmeans(lm_mass, "micro_treat", by = "temp_treat")
-
-# Display p-values for pairwise comparisons grouped by temperature treatment
-  pairs(emmeans(lm_mass, "micro_treat", by = "temp_treat"))
+# LMM output  
+  summary(gau_mass)
   
-# Display estimated marginal means for each pairwise comparison grouped by microbiome treatment
-  emmeans(lm_mass, "temp_treat", by = "micro_treat")
+# Pairwise comparisons by temperature treatment
+  emmeans(gau_mass, "micro_treat", by = "temp_treat")
+  pairs(emmeans(gau_mass, "micro_treat", by = "temp_treat"))
   
-# Display p-values for pairwise comparisons grouped by microbiome treatment
-  pairs(emmeans(lm_mass, "temp_treat", by = "micro_treat"))
+# Pairwise comparisons by microbiome treatment
+  emmeans(gau_mass, "temp_treat", by = "micro_treat")
+  pairs(emmeans(gau_mass, "temp_treat", by = "micro_treat"))
   
 ## Proportion of larval body fat ----
 
-# Subset df to include just treatments and response variable (wet body mass)
+# Subset df to include just treatments and response variable
   males_health_fat <- males_health %>%
-    select(bee, graft_stage, temp_treat, micro_treat, combo_treat, prop_body_fat)
+    select(bee, temp_treat, micro_treat, combo_treat, graft_stage, prop_body_fat)
   
-# Determine sample sizes of males by treatment
-  males_health_fat_ss <- males_health_fat %>%
+# Determine sample sizes, mean, and sd of males by treatment
+  males_health_fat %>%
     group_by(combo_treat) %>%
-    tally()
-  males_health_fat_ss
+    summarise(N = n(),
+              Mean = mean(prop_body_fat), 
+              SD = sd(prop_body_fat))
   
-# ANOVA: Do any of the group means differ?
-  males_fat_aov <- aov(prop_body_fat ~ temp_treat * micro_treat, data = males_health_fat)
-  
-# Check for normality
-  qqPlot(males_fat_aov$residuals, id = FALSE)  
-  
-# Shapiro-Wilk normality test
-  shapiro.test(males_fat_aov$residuals)
-  
-# Levene's test to assess for equal variance
-  leveneTest(males_health_fat$prop_body_fat ~ males_health_fat$combo_treat)
-  
-# Pearson's chi-squared to test for independence
-  chisq.test(males_health_fat$temp_treat, males_health_fat$micro_treat)
-  
-# ANOVA output  
-  summary(males_fat_aov)
-
-# Post-hoc: Which group means differ?
-  fat_tukey <- TukeyHSD(males_fat_aov)
-  fat_tukey
-
-# Linear contrasts
-  
-# What is the difference in total body fat between treatments? Dummy coding
-  
-# Ensure micro_treat and temp_treat are factors
+# Change micro_treat and temp_treat to factors
   males_health_fat$micro_treat <- as.factor(males_health_fat$micro_treat)
   males_health_fat$temp_treat <- as.factor(males_health_fat$temp_treat)
   
@@ -229,51 +162,84 @@
   males_health_fat <- males_health_fat %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
   levels(males_health_mass$temp_treat)
   
-# Create a contrast matrix for micro_treat and temp_treat
-  contrasts(males_health_fat$micro_treat)
-  contrasts(males_health_fat$temp_treat)
+# LMM of larval fat content using grafting stage as a random intercept  
+  gau_fat <- lme4::lmer(prop_body_fat ~ micro_treat * temp_treat + (1|graft_stage), data = males_health_fat)
   
-# Run linear model
-  lm_fat <- lme(prop_body_fat ~ micro_treat + temp_treat, random = ~1|graft_stage, data = males_health_fat)
-  summary(lm_fat)
+# Check for normality with Q-Q plots and the Shapiro-Wilks test
+  qqnorm(resid(gau_fat, type = "pearson"))
+  qqline(resid(gau_fat, type = "pearson"))
+  shapiro.test(resid(gau_fat))
   
-# Display estimated marginal means for each pairwise comparison grouped by temperature treatment
-  emmeans(lm_fat, "micro_treat", by = "temp_treat")
+# LMM output
+  summary(gau_fat)
   
-# Display p-values for pairwise comparisons grouped by temperature treatment
-  pairs(emmeans(lm_fat, "micro_treat", by = "temp_treat"))
-
-# Display estimated marginal means for each pairwise comparison grouped by microbiome treatment
-  emmeans(lm_fat, "temp_treat", by = "micro_treat")
+# Pairwise comparisons by temperature treatment
+  emmeans(gau_fat, "micro_treat", by = "temp_treat")
+  pairs(emmeans(gau_fat, "micro_treat", by = "temp_treat"))
   
-# Display p-values for pairwise comparisons grouped by microbiome treatment
-  pairs(emmeans(lm_fat, "temp_treat", by = "micro_treat"))  
+# Pairwise comparisons by microbiome treatment
+  emmeans(gau_fat, "temp_treat", by = "micro_treat")
+  pairs(emmeans(gau_fat, "temp_treat", by = "micro_treat"))
   
 ## Duration of developmental stages ----
 
-# Determine sample sizes of males by treatment
-  males_duration_ss <- males_health %>%
+# Remove rows without complete data
+  males_duration <- males_duration[!is.na(males_duration$days_instar2.5), ] 
+  
+# Determine sample sizes, mean, and sd of males by treatment
+  males_duration %>%
     group_by(combo_treat) %>%
-    tally()
-  males_duration_ss
+    summarise(N = n(),
+              Mean = mean(days_instar2.5), 
+              SD = sd(days_instar2.5))
   
-# ANOVA: Do any of the group means differ?
-  males_dev_aov <- aov(days_instar2.5 ~ temp_treat + micro_treat, data = males_duration)
+# Change micro_treat and temp_treat to factors
+  males_duration$micro_treat <- as.factor(males_duration$micro_treat)
+  males_duration$temp_treat <- as.factor(males_duration$temp_treat)
   
-# Check for normality
-  qqPlot(males_dev_aov$residuals, id = FALSE)  
+# Set micro_treat reference group as sterile
+  males_duration <- males_duration %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males_duration$micro_treat)
   
-# Shapiro-Wilk normality test
-  shapiro.test(males_dev_aov$residuals)
-
-# Levene's test to assess for equal variance
-  leveneTest(males_duration$days_instar2.5 ~ males_duration$combo_treat)
-
-# Kruskal-Wallis test: non-parametric one-way analysis of variance
-  kruskal.test(days_instar2.5 ~ combo_treat, data = males_duration)
-
-# Post-hoc: Dunn's test
-  dunnTest(days_instar2.5 ~ combo_treat, data = males_duration, method = "bonferroni")
+# Set temp_treat reference group as ambient  
+  males_duration <- males_duration %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males_duration$temp_treat)
+  
+# LMM of larval development using grafting stage as a random intercept 
+  gau_dur <- lme4::lmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), data = males_duration)
+  
+# Check for normality with Q-Q plots and the Shapiro-Wilks test
+  qqnorm(resid(gau_dur, type = "pearson"))
+  qqline(resid(gau_dur, type = "pearson"))
+  shapiro.test(resid(gau_dur))
+  
+# LMM output  
+  #summary(gau_dur)
+  
+# Display estimated marginal means for each pairwise comparison grouped by temperature treatment
+  #emmeans(gau_dur, "micro_treat", by = "temp_treat")
+  #pairs(emmeans(gau_dur, "micro_treat", by = "temp_treat"))
+  
+# Display estimated marginal means for each pairwise comparison grouped by microbiome treatment
+  #emmeans(gau_dur, "temp_treat", by = "micro_treat")
+  #pairs(emmeans(gau_dur, "temp_treat", by = "micro_treat"))
+  
+# GLMM of larval development using grafting stage as a random intercept and gamma distribution
+  gam_dur <- lme4::glmer(days_instar2.5 ~ micro_treat + temp_treat + (1|graft_stage), family = Gamma, data = males_duration)
+ 
+# Check for heteroscedasticity
+  plot(gam_dur)
+  
+# GLMM output  
+  summary(gam_dur)
+  
+# Pairwise comparisons by temperature treatment
+  emmeans(gam_dur, "micro_treat", by = "temp_treat")
+  pairs(emmeans(gam_dur, "micro_treat", by = "temp_treat"))
+  
+#Pairwise comparisons by microbiome treatment
+  emmeans(gam_dur, "temp_treat", by = "micro_treat")
+  pairs(emmeans(gam_dur, "temp_treat", by = "micro_treat"))
 
 ## Mortality ----
 
@@ -286,7 +252,7 @@
 # Add sample sizes per treatment
   males_mortality_ss$N <- rep(30, times = 6)
   males_mortality_ss
-    
+
 # Add column and calculate percent mortality   
   males_mortality_ss$per_mort <- males_mortality_ss$n/males_mortality_ss$N
   males_mortality_ss
@@ -294,6 +260,10 @@
 ## Survivorship analysis ----
 # Resource: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html  
 # NOTE: Status: 0 = survival to the fifth instar; 1 = death
+  
+# Recreate originial df because NAs were removed above during analysis of larval development
+  duration <- read.csv("life_history - Data.csv")
+  males_duration <- duration[duration$sex == "M", ]
   
 # Convert character to date
   males_duration <- males_duration %>%
@@ -335,28 +305,28 @@
   males_duration %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
-    summarize(median_surv = median(total_surv_days))
+    summarize(median_surv = median(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
   
 # Display median survival time by temp_treat
   males_duration %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
-    summarize(median_surv = median(total_surv_days))
+    summarize(median_surv = median(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
 
 # Display median survival time by micro_treat
   males_duration %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
-    summarize(median_surv = median(total_surv_days))
+    summarize(median_surv = median(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
   
 # Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
   survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
-
-# Display other results comparing survival times between groups. See ?comp for notations.
-  comp(ten(s2))
-
+  
 # Cox regression model to compare survival times between groups (allows risk of death to vary across time)
-  cox_model1 <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+  cox_model1 <- coxph(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration)
   summary(cox_model1)
   
 # Test the proportional hazards assumption
@@ -376,35 +346,35 @@
   Surv(males_duration48$total_surv_days, males_duration48$status)
   
 # Fit the survival curve
-  s3 <- survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
+  s3 <- survfit2(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration48)
   summary(s3)
   
 # Display median survival time by combo_treat
   males_duration48 %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
-    summarize(median_surv = median(total_surv_days))
+    summarize(median_surv = median(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
   
 # Display median survival time by temp_treat
   males_duration48 %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
-    summarize(median_surv = median(total_surv_days))
+    summarize(median_surv = median(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
   
 # Display median survival time by micro_treat
   males_duration48 %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
-    summarize(median_surv = median(total_surv_days))
+    summarize(median_surv = median(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
   
 # Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
-  survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
-
-# Display other results comparing survival times between groups. See ?comp for notations.
-  comp(ten(s3))
-
+  survdiff(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration48)
+  
 # Cox regression model to compare survival times between groups (allows risk of death to vary across time)
-  cox_model2 <- coxph(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
+  cox_model2 <- coxph(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration48)
   summary(cox_model2)
 
 # Test the proportional hazards assumption

@@ -13,14 +13,16 @@
   library(ggplot2) # Version 3.4.3
   library(phyloseq) # Version 1.44.0
   library(vegan) # Version 2.6-4
+  library(RVAideMemoire) # Version 0.9-83-7
+  library(microbiome) # Version 1.22.0
+  #library(knitr) # Version 1.45
   library(magrittr) # Version 2.0.3
   library(decontam) # Version 1.20.0
   library(nlme) # Version 3.1-163
   library(grDevices) # Version 4.3.1
   library(RColorBrewer) # Version 1.1-3
   library(unikn) # Version 0.9.0
-  library(ShortRead) # Version 1.58.0
-  library(dplyr) # Version 1.1.3
+  #library(dplyr) # Version 1.1.3
   library(DESeq2) # Version 1.40.2
 
 # Import data
@@ -54,7 +56,7 @@
 # Format your data to work with phyloseq
   ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa))
   ps1
-
+  
 # Summarize the phyloseq obj contents before processing
   summarize_phyloseq(ps1)
   
@@ -155,10 +157,10 @@
   
 # What is the mean number of reads in all samples?
   mean(sample_sums(ps3))
-
+  
 # Summarize the phyloseq obj contents after processing
-  summarize_phyloseq(ps3) 
-                                             
+  summarize_phyloseq(ps3)
+  
 # Add Seq to each taxa name
   taxa_names(ps3) <- paste0("Seq", seq(ntaxa(ps3)))
   
@@ -201,15 +203,15 @@
   bactrich <- bactrich[complete.cases(bactrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon diversity
-  mod1 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|nesting_tube, data = bactrich)
+  mod1 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
   anova(mod1)
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson diversity
-  mod2 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|nesting_tube, data = bactrich)
+  mod2 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
   anova(mod2)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod3 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|nesting_tube, data = bactrich)
+  mod3 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
   anova(mod3)
   
 # Reorder x-axis
@@ -282,21 +284,21 @@
   tab <- otu_table(ps3)
   class(tab) <- "matrix"
   tab <- t(tab)
-  rare_tidy_bact <- rarecurve(tab, step = 20, label = FALSE)
+  rare <- rarecurve(tab, step = 20, label = FALSE)
   
 # Save rarefaction data as a "tidy" df
   rare_tidy_bact <- rarecurve(tab, label = FALSE, tidy = TRUE)
   
 # Plot rarefaction curve
-  rare_bact <- ggplot(rare_tidy_bact, aes(x = Sample, y = Species, group = Site)) +
-                  geom_line() +
-                  theme_bw() +
-                  theme(panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank()) +
-                  labs(title = "A") + 
-                  xlab("Number of reads") +
-                  ylab("Number of species")
-  rare_bact
+  OsmiaCC_rare_bact <- ggplot(rare_tidy_bact, aes(x = Sample, y = Species, group = Site)) +
+                          geom_line() +
+                          theme_bw() +
+                          theme(panel.grid.major = element_blank(),
+                                panel.grid.minor = element_blank()) +
+                          labs(title = "A") + 
+                          xlab("Number of reads") +
+                          ylab("Number of species")
+  OsmiaCC_rare_bact
   
 # Set seed and rarefy
   set.seed(1234)
@@ -311,6 +313,10 @@
 # Perform the PERMANOVA to test effects of treatment on bacterial community composition  
   bact_perm <- adonis2(bact_bray ~ temp_treat*micro_treat, data = samplebact)
   bact_perm
+  
+# Follow up with pairwise comparisons - which sample types differ?
+  bact_perm_BH <- pairwise.perm.manova(bact_bray, samplebact$sample_type, p.method = "BH")
+  bact_perm_BH
   
 ## Test for homogeneity of multivariate dispersion ----
   
@@ -341,16 +347,17 @@
   ord.pcoa.bray <- ordinate(ps.prop, method = "PCoA", distance = "bray")
   
 # Plot ordination
-  OsmiaCC_PCoA_16S <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
-                        theme_bw() +
-                        theme(legend.position = "none") +
-                        theme(text = element_text(size = 16)) +
-                        theme(legend.justification = "left", 
-                              legend.title = element_text(size = 16, colour = "black"), 
-                              legend.text = element_text(size = 14, colour = "black")) + 
-                        geom_point(size = 3) +
-                        scale_color_manual(values = c("#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
-                        labs(title = "A", color = "Treatment", shape = "Sample Type")
+  OsmiaCC_PCoA_bact <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
+                          theme_bw() +
+                          theme(legend.position = "none") +
+                          theme(text = element_text(size = 16)) +
+                          theme(legend.justification = "left", 
+                                legend.title = element_text(size = 16, colour = "black"), 
+                                legend.text = element_text(size = 14, colour = "black")) + 
+                          geom_point(size = 3) +
+                          scale_color_manual(values = c("#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
+                          labs(title = "A", color = "Treatment", shape = "Sample Type")
+  OsmiaCC_PCoA_bact
   
 ## Stacked community plot ----
   
@@ -359,7 +366,7 @@
   
 # Stretch palette (define more intermediate color options)
   okabe_ext <- usecol(Okabe_Ito, n = 29)
-  colors <- sample(okabe_ext)  
+  colors <- sample(okabe_ext)
   
 # Sort data by Family
   y1 <- tax_glom(rareps, taxrank = 'Family') # agglomerate taxa
@@ -369,6 +376,9 @@
   y3$Family[y3$Abundance < 0.01] <- "Family < 1% abund."
   y3$Family <- as.factor(y3$Family)
   head(y3)
+  
+# Save relative abundance data
+  write.csv(y3, "OsmiaCC_Fam_bact_relabund.csv")
   
 # Reorder x-axis  
   y3$combo_treat <- factor(y3$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -428,14 +438,17 @@
   y6$Genus <- as.character(y6$Genus)
   y6$Genus[y6$Abundance < 0.01] <- "Genera < 1% abund."
   write.csv(y6, file = "y6.csv")
-  y6$Genus <- as.factor(y9$Genus)
+  y6$Genus <- as.factor(y6$Genus)
   head(y6)
+  
+# Save relative abundance data
+  write.csv(y6, "OsmiaCC_Gen_bact_relabund.csv")
   
 # Reorder x-axis  
   y6$combo_treat <- factor(y6$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Plot Genus by treatment
-  OsmiaCC_gen_relabund_fungi <- ggplot(data = y6, aes(x = combo_treat, y = Abundance, fill = Genus)) + 
+  OsmiaCC_gen_relabund_bact <- ggplot(data = y6, aes(x = combo_treat, y = Abundance, fill = Genus)) + 
                                     geom_bar(stat = "identity", position = "fill") + 
                                     scale_fill_manual(values = colors) + 
                                     facet_grid(~ sample_type, 
@@ -455,7 +468,7 @@
                                           legend.text = element_text(size = 14, colour = "black")) + 
                                     guides(fill = guide_legend(ncol = 2)) +
                                     ggtitle("A")
-  OsmiaCC_gen_relabund_fungi
+  OsmiaCC_gen_relabund_bact
   
 # Plot Genus for each sample
   ggplot(data = y6, aes(x = sampleID, y = Abundance, fill = Genus)) + 

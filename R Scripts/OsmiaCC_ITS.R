@@ -71,11 +71,11 @@
   sample_or_control <- samples$sample_or_control
   sex <- samples$sex
   sampleinfo <- data.frame(extractionID = extractionID,
-                           sample_type = sample_type, 
-                           sampleID = sampleID,  
-                           temp_treat = temp_treat, 
-                           micro_treat = micro_treat, 
-                           combo_treat = combo_treat, 
+                           sample_type = sample_type,
+                           sampleID = sampleID,
+                           temp_treat = temp_treat,
+                           micro_treat = micro_treat,
+                           combo_treat = combo_treat,
                            sample_or_control = sample_or_control,
                            sex = sex)
   rownames(sampleinfo) <- samples.out
@@ -166,7 +166,7 @@
 # What is the mean number of reads in all samples?
   mean(sample_sums(ps4))
   
-# Summarize the phyloseq obj contents after processing
+# Summarize the phyloseq obj contents before processing
   summarize_phyloseq(ps4)
   
 # Add Seq to each taxa name
@@ -211,18 +211,19 @@
   fungrich <- fungrich[complete.cases(fungrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon richness
-  mod4 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|sampleID, data = fungrich)
+  mod4 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
   anova(mod4)
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson richness
-  mod5 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|sampleID, data = fungrich)
+  mod5 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
   anova(mod5)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod6 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|sampleID, data = fungrich)
+  mod6 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
   anova(mod6)
   
-# Reorder x-axis
+
+  # Reorder x-axis
   fungrich$combo_treat <- factor(fungrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # New names for facet_grid
@@ -378,6 +379,9 @@
   y9$Family <- as.factor(y9$Family)
   head(y9)
   
+# Save relative abundance data
+  write.csv(y9, "OsmiaCC_Fam_bact_relabund.csv")  
+  
 # Reorder x-axis  
   y9$combo_treat <- factor(y9$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
@@ -439,6 +443,9 @@
   write.csv(y12, file = "y12.csv")
   y12$Genus <- as.factor(y12$Genus)
   head(y12)
+  
+# Save relative abundance data
+  write.csv(y12, "OsmiaCC_Gen_bact_relabund.csv")
   
 # Reorder x-axis  
   y12$combo_treat <- factor(y12$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))

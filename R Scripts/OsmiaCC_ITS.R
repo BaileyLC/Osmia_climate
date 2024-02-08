@@ -88,8 +88,12 @@
   ps3 <- merge_phyloseq(ps1, ps2)
   ps3
   
-# Summarize the phyloseq obj contents before processing
-  summarize_phyloseq(ps3)
+# Display total number of reads and means per sample in phyloseq obj before processing
+  sum(sample_sums(ps3))
+  mean(sample_sums(ps3))
+  
+# How many taxa were identified before processing
+  nrow(tax_table(ps3))
   
 ## Inspect & remove contaminants ----
 # Resource: https://benjjneb.github.io/decontam/vignettes/decontam_intro.html
@@ -160,14 +164,23 @@
   ps4 <- prune_samples(sample_data(ps4)$sex != "F", ps4)
   ps4
   
-# How many reads are in each sample? 
-  sample_sums(ps4)
-  
-# What is the mean number of reads in all samples?
+# Display total number of reads and means per sample in phyloseq obj after processing
+  sum(sample_sums(ps4))
   mean(sample_sums(ps4))
   
-# Summarize the phyloseq obj contents before processing
-  summarize_phyloseq(ps4)
+# How many taxa were identified after processing
+  nrow(tax_table(ps4))
+  
+# Save sample metadata
+  meta <- sample_data(ps4)
+  
+# How many total samples?
+  nrow(meta)
+  
+# How many samples for each developmental stage?  
+  meta %>%
+    group_by(sample_type, combo_treat) %>%
+    summarise(N = n())
   
 # Add Seq to each taxa name
   taxa_names(ps4) <- paste0("Seq", seq(ntaxa(ps4)))

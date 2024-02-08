@@ -77,7 +77,7 @@
   
 # Determine which ASVs are contaminants based on prevalence (presence/absence) in negative controls
   sample_data(ps1)$is.neg <- sample_data(ps1)$sample_or_control == "control"
-  contamdf.prev <- isContaminant(ps1, method = "prevalence", neg = "is.neg")
+  contamdf.prev <- decontam::isContaminant(ps1, method = "prevalence", neg = "is.neg")
   
 # How many contaminants are there?
   table(contamdf.prev$contaminant)
@@ -86,7 +86,7 @@
   head(which(contamdf.prev$contaminant))
   
 # Determine which ASVs are contaminants based on prevalence (presence/absence) higher than 0.5 in negative controls
-  contamdf.prev05 <- isContaminant(ps1, method = "prevalence", neg = "is.neg", threshold = 0.5)
+  contamdf.prev05 <- decontam::isContaminant(ps1, method = "prevalence", neg = "is.neg", threshold = 0.5)
   
 # How many contaminants are there?
   table(contamdf.prev05$contaminant)
@@ -95,16 +95,16 @@
   head(which(contamdf.prev05$contaminant))
   
 # Make phyloseq object of presence-absence in negative controls
-  ps.neg <- prune_samples(sample_data(ps1)$sample_or_control == "control", ps1)
+  ps.neg <- phyloseq::prune_samples(sample_data(ps1)$sample_or_control == "control", ps1)
   
 # Calculate taxa abundance in samples from sample counts
-  ps.neg.presence <- transform_sample_counts(ps.neg, function(abund) 1*(abund > 0))
+  ps.neg.presence <- phyloseq::transform_sample_counts(ps.neg, function(abund) 1*(abund > 0))
   
 # Make phyloseq object of presence-absence in true positive samples
-  ps.pos <- prune_samples(sample_data(ps1)$sample_or_control == "sample", ps1)
+  ps.pos <- phyloseq::prune_samples(sample_data(ps1)$sample_or_control == "sample", ps1)
   
 # Calculate taxa abundance in samples from sample counts
-  ps.pos.presence <- transform_sample_counts(ps.pos, function(abund) 1*(abund > 0))
+  ps.pos.presence <- phyloseq::transform_sample_counts(ps.pos, function(abund) 1*(abund > 0))
   
 # Make data.frame of prevalence in positive and negative samples
   df.pres <- data.frame(prevalence.pos = taxa_sums(ps.pos.presence), 
@@ -118,40 +118,39 @@
     ylab("Prevalence (Samples)")
   
 # Make a new phyloseq object without contaminant taxa  
-  ps.noncontam <- prune_taxa(!contamdf.prev$contaminant, ps1)
+  ps.noncontam <- phyloseq::prune_taxa(!contamdf.prev$contaminant, ps1)
   ps.noncontam
   
 # Remove control samples used for identifying contaminants
-  ps_sub <- subset_samples(ps.noncontam, sample_or_control != "control")
+  ps_sub <- phyloseq::subset_samples(ps.noncontam, sample_or_control != "control")
   ps_sub
   
 # Remove DNA from mitochondria & chloroplast
   ps2 <- ps_sub %>%
-    subset_taxa(
-      Kingdom == "Bacteria" &
-        Family  != "mitochondria" &
-        Class   != "Chloroplast"
+    phyloseq::subset_taxa(Kingdom == "Bacteria" &
+                            Family  != "mitochondria" &
+                              Class   != "Chloroplast"
     )
   
 # Remove DNA from Eukarya, Eukaryota & Streptophyta
   ps2 <- ps2 %>%
-    subset_taxa(Kingdom != "Eukarya" &
-                Kingdom != "Eukaryota" &
-                  Family != "Streptophyta")
+    phyloseq::subset_taxa(Kingdom != "Eukarya" &
+                          Kingdom != "Eukaryota" &
+                            Family != "Streptophyta")
   
 # Remove DNA from Archaea
   ps2 <- ps2 %>%
-    subset_taxa(Kingdom != "Archaea")
+    phyloseq::subset_taxa(Kingdom != "Archaea")
   
 # What remains in the phyloseq object?
   ps2
   
 # Remove samples without any reads
-  ps3 <- prune_samples(sample_sums(ps2) != 0, ps2)
+  ps3 <- phyloseq::prune_samples(sample_sums(ps2) != 0, ps2)
   ps3
   
 # Remove samples from females
-  ps3 <- prune_samples(sample_data(ps3)$sex != "F", ps3)
+  ps3 <- phyloseq::prune_samples(sample_data(ps3)$sex != "F", ps3)
   ps3
   
 # Display total number of reads and means per sample in phyloseq obj after processing
@@ -195,7 +194,7 @@
 ## Species richness ----  
   
 # Estimate Shannon, Simpson & observed richness
-  bactrich <- estimate_richness(ps3, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
+  bactrich <- phyloseq::estimate_richness(ps3, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
   
 # Build df with metadata 
   bactrich$sampleID <- sample_data(ps3)$sampleID
@@ -206,24 +205,24 @@
   bactrich$random_effect <- sample_data(ps3)$random_effect
   
 # Plot Shannon, Simpson & observed richness  
-  plot_richness(ps3, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
-    theme_bw() +
-    xlab("")
+  phyloseq::plot_richness(ps3, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
+                theme_bw() +
+                xlab("")
   
 # Remove samples with 0 species richness 
   bactrich[bactrich == 0] <- NA
   bactrich <- bactrich[complete.cases(bactrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon diversity
-  mod1 <- lme(Shannon ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
+  mod1 <- nlm::lme(Shannon ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
   anova(mod1)
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson diversity
-  mod2 <- lme(Simpson ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
+  mod2 <- nlme::lme(Simpson ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
   anova(mod2)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod3 <- lme(Observed ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
+  mod3 <- nlme::lme(Observed ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
   anova(mod3)
   
 # Reorder x-axis
@@ -296,10 +295,9 @@
   tab <- otu_table(ps3)
   class(tab) <- "matrix"
   tab <- t(tab)
-  rare <- rarecurve(tab, step = 20, label = FALSE)
   
 # Save rarefaction data as a "tidy" df
-  rare_tidy_bact <- rarecurve(tab, label = FALSE, tidy = TRUE)
+  rare_tidy_bact <- vegan::rarecurve(tab, label = FALSE, tidy = TRUE)
   
 # Plot rarefaction curve
   OsmiaCC_rare_bact <- ggplot(rare_tidy_bact, aes(x = Sample, y = Species, group = Site)) +
@@ -314,7 +312,7 @@
   
 # Set seed and rarefy
   set.seed(1234)
-  rareps <- rarefy_even_depth(ps3, sample.size = 26)
+  rareps <- phyloseq::rarefy_even_depth(ps3, sample.size = 26)
   
 # Create a distance matrix using Bray Curtis dissimilarity
   bact_bray <- phyloseq::distance(rareps, method = "bray")
@@ -323,17 +321,17 @@
   samplebact <- data.frame(sample_data(rareps))
   
 # Perform the PERMANOVA to test effects of treatment on bacterial community composition  
-  bact_perm <- adonis2(bact_bray ~ temp_treat*micro_treat, data = samplebact)
+  bact_perm <- vegan::adonis2(bact_bray ~ temp_treat*micro_treat, data = samplebact)
   bact_perm
   
 # Follow up with pairwise comparisons - which sample types differ?
-  bact_perm_BH <- pairwise.perm.manova(bact_bray, samplebact$sample_type, p.method = "BH")
+  bact_perm_BH <- RVAideMemoire::pairwise.perm.manova(bact_bray, samplebact$sample_type, p.method = "BH")
   bact_perm_BH
   
 ## Test for homogeneity of multivariate dispersion ----
   
 # Calculate the average distance of group members to the group centroid
-  disp_bact <- betadisper(bact_bray, samplebact$combo_treat)
+  disp_bact <- vegan::betadisper(bact_bray, samplebact$combo_treat)
   disp_bact
   
 # Do any of the group dispersions differ?
@@ -341,9 +339,9 @@
   disp_bact_an
   
 # Which group dispersions differ?
-  disp_bact_ttest <- permutest(disp_bact, 
-                               control = permControl(nperm = 999),
-                               pairwise = TRUE)
+  disp_bact_ttest <- vegan::permutest(disp_bact, 
+                                      control = permControl(nperm = 999),
+                                      pairwise = TRUE)
   disp_bact_ttest
   
 # Which group dispersions differ?
@@ -353,10 +351,10 @@
 ## Ordination ----
   
 # Calculate the relative abundance of each otu  
-  ps.prop <- transform_sample_counts(ps3, function(otu) otu/sum(otu))
+  ps.prop <- phyloseq::transform_sample_counts(ps3, function(otu) otu/sum(otu))
   
 # PCoA using Bray-Curtis distance
-  ord.pcoa.bray <- ordinate(ps.prop, method = "PCoA", distance = "bray")
+  ord.pcoa.bray <- phyloseq::ordinate(ps.prop, method = "PCoA", distance = "bray")
   
 # Plot ordination
   OsmiaCC_PCoA_bact <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
@@ -377,13 +375,13 @@
   Okabe_Ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
   
 # Stretch palette (define more intermediate color options)
-  okabe_ext <- usecol(Okabe_Ito, n = 29)
+  okabe_ext <- unikn::usecol(Okabe_Ito, n = 29)
   colors <- sample(okabe_ext)
   
 # Sort data by Family
-  y1 <- tax_glom(rareps, taxrank = 'Family') # agglomerate taxa
-  y2 <- transform_sample_counts(y1, function(x) x/sum(x))
-  y3 <- psmelt(y2)
+  y1 <- phyloseq::tax_glom(rareps, taxrank = 'Family') # agglomerate taxa
+  y2 <- phyloseq::transform_sample_counts(y1, function(x) x/sum(x))
+  y3 <- phyloseq::psmelt(y2)
   y3$Family <- as.character(y3$Family)
   y3$Family[y3$Abundance < 0.01] <- "Family < 1% abund."
   y3$Family <- as.factor(y3$Family)
@@ -444,9 +442,9 @@
     ggtitle("Bacteria")
   
 # Sort data by Genus
-  y4 <- tax_glom(rareps, taxrank = 'Genus') # agglomerate taxa
-  y5 <- transform_sample_counts(y4, function(x) x/sum(x))
-  y6 <- psmelt(y5)
+  y4 <- phyloseq::tax_glom(rareps, taxrank = 'Genus') # agglomerate taxa
+  y5 <- phyloseq::transform_sample_counts(y4, function(x) x/sum(x))
+  y6 <- phyloseq::psmelt(y5)
   y6$Genus <- as.character(y6$Genus)
   y6$Genus[y6$Abundance < 0.01] <- "Genera < 1% abund."
   write.csv(y6, file = "y6.csv")
@@ -510,7 +508,7 @@
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
 
 # Convert from a phyloseq to a deseq obj
-  desq_obj <- phyloseq_to_deseq2(ps3, ~ combo_treat)
+  desq_obj <- phyloseq::phyloseq_to_deseq2(ps3, ~ combo_treat)
   
 # Calculate the geometric mean and remove rows with NA
   gm_mean <- function(x, na.rm = TRUE) {
@@ -521,10 +519,10 @@
   geoMeans <- apply(counts(desq_obj), 1, gm_mean)
   
 # Estimate size factors
-  desq_dds <- estimateSizeFactors(desq_obj, geoMeans = geoMeans)
+  desq_dds <- DESeq2::estimateSizeFactors(desq_obj, geoMeans = geoMeans)
 
 # Fit a local regression
-  desq_dds <- DESeq(desq_dds, fitType = "local")
+  desq_dds <- DESeq2::DESeq(desq_dds, fitType = "local")
   
 # Set significance factor  
   alpha <- 0.05
@@ -532,7 +530,7 @@
 # WN vs AN
   
 # Extract results from differential abundance table for initial vs final provision
-  WN_AN <- results(desq_dds, contrast = c("combo_treat", "WN", "AN"))
+  WN_AN <- DESeq2::results(desq_dds, contrast = c("combo_treat", "WN", "AN"))
   
 # Order differential abundances by their padj value
   WN_AN <- WN_AN[order(WN_AN$padj, na.last = NA), ]
@@ -546,7 +544,7 @@
 # AN vs CN
   
 # Extract results from differential abundance table for initial vs final provision
-  AN_CN <- results(desq_dds, contrast = c("combo_treat", "AN", "CN"))
+  AN_CN <- DESeq2::results(desq_dds, contrast = c("combo_treat", "AN", "CN"))
   
 # Order differential abundances by their padj value
   AN_CN <- AN_CN[order(AN_CN$padj, na.last = NA), ]
@@ -560,7 +558,7 @@
 # WN vs CN
   
 # Extract results from differential abundance table for initial vs final provision
-  WN_CN <- results(desq_dds, contrast = c("combo_treat", "WN", "CN"))
+  WN_CN <- DESeq2::results(desq_dds, contrast = c("combo_treat", "WN", "CN"))
   
 # Order differential abundances by their padj value
   WN_CN <- WN_CN[order(WN_CN$padj, na.last = NA), ]

@@ -108,7 +108,7 @@
   
 # Determine which ASVs are contaminants based on prevalence (presence/absence) in negative controls
   sample_data(ps3)$is.neg <- sample_data(ps3)$sample_or_control == "control"
-  contamdf.prev <- isContaminant(ps3, method = "prevalence", neg = "is.neg")
+  contamdf.prev <- decontam::isContaminant(ps3, method = "prevalence", neg = "is.neg")
   
 # How many contaminants are there?
   table(contamdf.prev$contaminant)
@@ -117,23 +117,23 @@
   head(which(contamdf.prev$contaminant))
   
 # Determine which ASVs are contaminants based on prevalence (presence/absence) higher than 0.5 in negative controls
-  contamdf.prev05 <- isContaminant(ps3, method = "prevalence", neg = "is.neg", threshold = 0.5)
+  contamdf.prev05 <- decontam::isContaminant(ps3, method = "prevalence", neg = "is.neg", threshold = 0.5)
   table(contamdf.prev05$contaminant)
   
 # Which ASVs are contaminants?
   head(which(contamdf.prev05$contaminant))
   
 # Make phyloseq object of presence-absence in negative controls
-  ps.neg <- prune_samples(sample_data(ps3)$sample_or_control == "control", ps3)
+  ps.neg <- phyloseq::prune_samples(sample_data(ps3)$sample_or_control == "control", ps3)
   
 # Calculate taxa abundance in samples from sample counts
-  ps.neg.presence <- transform_sample_counts(ps.neg, function(abund) 1*(abund > 0))
+  ps.neg.presence <- phyloseq::transform_sample_counts(ps.neg, function(abund) 1*(abund > 0))
   
 # Make phyloseq object of presence-absence in true positive samples
-  ps.pos <- prune_samples(sample_data(ps3)$sample_or_control == "sample", ps3)
+  ps.pos <- phyloseq::prune_samples(sample_data(ps3)$sample_or_control == "sample", ps3)
   
 # Calculate taxa abundance in samples from sample counts
-  ps.pos.presence <- transform_sample_counts(ps.pos, function(abund) 1*(abund > 0))
+  ps.pos.presence <- phyloseq::transform_sample_counts(ps.pos, function(abund) 1*(abund > 0))
   
 # Make data.frame of prevalence in positive and negative samples
   df.pres <- data.frame(prevalence.pos = taxa_sums(ps.pos.presence), 
@@ -147,19 +147,19 @@
     ylab("Prevalence (Samples)") 
   
 # Make a new phyloseq object without contaminant taxa 
-  ps.noncontam <- prune_taxa(!contamdf.prev$contaminant, ps3)
+  ps.noncontam <- phyloseq::prune_taxa(!contamdf.prev$contaminant, ps3)
   ps.noncontam
   
 # Remove control samples used for identifying contaminants
-  ps_sub <- subset_samples(ps.noncontam, sample_or_control != "control")
+  ps_sub <- phyloseq::subset_samples(ps.noncontam, sample_or_control != "control")
   ps_sub
   
 # Remove samples without any reads
-  ps4 <- prune_samples(sample_sums(ps_sub) != 0, ps_sub)
+  ps4 <- phyloseq::prune_samples(sample_sums(ps_sub) != 0, ps_sub)
   ps4
   
 # Remove samples from females
-  ps4 <- prune_samples(sample_data(ps4)$sex != "F", ps4)
+  ps4 <- phyloseq::prune_samples(sample_data(ps4)$sex != "F", ps4)
   ps4
   
 # Display total number of reads and means per sample in phyloseq obj after processing
@@ -203,7 +203,7 @@
 ## Species richness ----
   
 # Calculate species richness
-  fungrich <- estimate_richness(ps4, split = TRUE, measures = c("Shannon", "Simpson", "Observed")) 
+  fungrich <- phyloseq::estimate_richness(ps4, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
   
 # Build df with metadata
   fungrich$sampleID <- sample_data(ps4)$sampleID
@@ -213,28 +213,28 @@
   fungrich$combo_treat <- sample_data(ps4)$combo_treat
 
 # Plot species richness  
-  plot_richness(ps4, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
-    theme_bw() +
-    xlab("")
+  phyloseq::plot_richness(ps4, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
+                theme_bw() +
+                xlab("")
   
 # Remove samples with 0 species richness
   fungrich[fungrich == 0] <- NA
   fungrich <- fungrich[complete.cases(fungrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon richness
-  mod4 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
+  mod4 <- nlme::lme(Shannon ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
   anova(mod4)
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson richness
-  mod5 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
+  mod5 <- nlme::lme(Simpson ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
   anova(mod5)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod6 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
+  mod6 <- nlme::lme(Observed ~ temp_treat*micro_treat, random = ~1|random_effect, data = fungrich)
   anova(mod6)
   
 
-  # Reorder x-axis
+# Reorder x-axis
   fungrich$combo_treat <- factor(fungrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # New names for facet_grid
@@ -298,10 +298,10 @@
   tab <- otu_table(ps2)
   class(tab) <- "matrix"
   tab <- t(tab)
-  rare <- rarecurve(tab, step = 20, label = FALSE)
+  rare <- vegan::rarecurve(tab, step = 20, label = FALSE)
   
 # Save rarefaction data as a "tidy" df
-  rare_tidy_fungi <- rarecurve(tab, label = FALSE, tidy = TRUE)
+  rare_tidy_fungi <- vegan::rarecurve(tab, label = FALSE, tidy = TRUE)
   
 # Plot rarefaction curve
   OsmiaCC_rare_fungi <- ggplot(rare_tidy_fungi, aes(x = Sample, y = Species, group = Site)) +
@@ -325,13 +325,13 @@
   samplefung <- data.frame(sample_data(rareps))
   
 # Perform the PERMANOVA to test effects of treatment on bacterial community composition 
-  fung_perm <- adonis2(fung_bray ~ temp_treat*micro_treat, data = samplefung)
+  fung_perm <- vegan::adonis2(fung_bray ~ temp_treat*micro_treat, data = samplefung)
   fung_perm
   
 ## Test for homogeneity of multivariate dispersion ----
   
 # Calculate the average distance of group members to the group centroid
-  disp_fung <- betadisper(fung_bray, samplefung$sample_type)
+  disp_fung <- vegan::betadisper(fung_bray, samplefung$sample_type)
   disp_fung
   
 # Do any of the group dispersions differ?
@@ -339,9 +339,9 @@
   disp_fung_an
   
 # Which group dispersions differ?
-  disp_fung_ttest <- permutest(disp_fung, 
-                               control = permControl(nperm = 999),
-                               pairwise = TRUE)
+  disp_fung_ttest <- vegan::permutest(disp_fung, 
+                                      control = permControl(nperm = 999),
+                                      pairwise = TRUE)
   disp_fung_ttest
   
 # Which group dispersions differ?
@@ -351,10 +351,10 @@
 ## Ordination ----
   
 # Calculate the relative abundance of each otu  
-  ps.prop <- transform_sample_counts(rareps, function(otu) otu/sum(otu))
+  ps.prop <- phyloseq::transform_sample_counts(rareps, function(otu) otu/sum(otu))
   
 # PCoA using Bray-Curtis distance
-  ord.pcoa.bray <- ordinate(ps.prop, method = "PCoA", distance = "bray")
+  ord.pcoa.bray <- phyloseq::ordinate(ps.prop, method = "PCoA", distance = "bray")
   
 # Plot ordination
   OsmiaCC_PCoA_fungi <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
@@ -374,16 +374,16 @@
   Okabe_Ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
   
 # Stretch palette (define more intermediate color options)
-  okabe_ext <- usecol(Okabe_Ito, n = 36)
+  okabe_ext <- unikn::usecol(Okabe_Ito, n = 36)
   colors <- sample(okabe_ext)
   
 # Remove patterns in tax_table   
   tax_table(rareps)[, colnames(tax_table(rareps))] <- gsub(tax_table(rareps)[, colnames(tax_table(rareps))], pattern = "[a-z]__", replacement = "")
   
 # Sort data by Family
-  y7 <- tax_glom(rareps, taxrank = 'Family') # agglomerate taxa
-  y8 <- transform_sample_counts(y7, function(x) x/sum(x))
-  y9 <- psmelt(y8)
+  y7 <- phyloseq::tax_glom(rareps, taxrank = 'Family') # agglomerate taxa
+  y8 <- phyloseq::transform_sample_counts(y7, function(x) x/sum(x))
+  y9 <- phyloseq::psmelt(y8)
   y9$Family <- as.character(y9$Family)
   y9$Family[y9$Abundance < 0.01] <- "Family < 1% abund."
   write.csv(y9, file = "y9.csv")
@@ -446,9 +446,9 @@
     ggtitle("Fungi")
   
 # Sort data by Genus
-  y10 <- tax_glom(rareps, taxrank = 'Genus') # agglomerate taxa
-  y11 <- transform_sample_counts(y10, function(x) x/sum(x))
-  y12 <- psmelt(y11)
+  y10 <- phyloseq::tax_glom(rareps, taxrank = 'Genus') # agglomerate taxa
+  y11 <- phyloseq::transform_sample_counts(y10, function(x) x/sum(x))
+  y12 <- phyloseq::psmelt(y11)
   y12$Genus <- as.character(y12$Genus)
   y12$Genus[y12$Abundance < 0.01] <- "Genera < 1% abund."
   write.csv(y12, file = "y12.csv")
@@ -509,7 +509,7 @@
   tax_table(ps2)[, colnames(tax_table(ps2))] <- gsub(tax_table(ps2)[, colnames(tax_table(ps2))], pattern = "[a-z]__", replacement = "")
   
 # Convert from a phyloseq to a deseq obj
-  desq_obj <- phyloseq_to_deseq2(ps2, ~ combo_treat)
+  desq_obj <- phyloseq::phyloseq_to_deseq2(ps2, ~ combo_treat)
   
 # Calculate the geometric mean and remove rows with NA
   gm_mean <- function(x, na.rm = TRUE) {
@@ -531,7 +531,7 @@
 # WN vs AN
   
 # Extract results from differential abundance table for initial vs final provision
-  WN_AN <- results(desq_dds, contrast = c("combo_treat", "WN", "AN"))
+  WN_AN <- DESeq2::results(desq_dds, contrast = c("combo_treat", "WN", "AN"))
   
 # Order differential abundances by their padj value
   WN_AN <- WN_AN[order(WN_AN$padj, na.last = NA), ]
@@ -545,7 +545,7 @@
 # AN vs CN
 
 # Extract results from differential abundance table for initial vs final provision
-  AN_CN <- results(desq_dds, contrast = c("combo_treat", "AN", "CN"))
+  AN_CN <- DESeq2::results(desq_dds, contrast = c("combo_treat", "AN", "CN"))
   
 # Order differential abundances by their padj value
   AN_CN <- AN_CN[order(AN_CN$padj, na.last = NA), ]
@@ -559,7 +559,7 @@
 # WN vs CN
   
 # Extract results from differential abundance table for initial vs final provision
-  WN_CN <- results(desq_dds, contrast = c("combo_treat", "WN", "CN"))
+  WN_CN <- DESeq2::results(desq_dds, contrast = c("combo_treat", "WN", "CN"))
   
 # Order differential abundances by their padj value
   WN_CN <- WN_CN[order(WN_CN$padj, na.last = NA), ]

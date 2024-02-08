@@ -14,6 +14,7 @@
   library(phyloseq) # Version 1.44.0
   library(vegan) # Version 2.6-4
   library(magrittr) # Version 2.0.3
+  library(tidyverse) # Version 2.0.0
   library(decontam) # Version 1.20.0
   library(nlme) # Version 3.1-163
   library(RColorBrewer) # Version 1.1-3

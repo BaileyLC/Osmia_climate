@@ -16,7 +16,6 @@
   library(magrittr) # Version 2.0.3
   library(decontam) # Version 1.20.0
   library(nlme) # Version 3.1-163
-  library(grDevices) # Version 4.3.1
   library(RColorBrewer) # Version 1.1-3
   library(unikn) # Version 0.9.0
   library(dplyr) # Version 1.1.3

@@ -13,7 +13,6 @@
   library(ggplot2) # Version 3.4.3
   library(phyloseq) # Version 1.44.0
   library(vegan) # Version 2.6-4
-  library(microbiome) # Version 1.22.0
   library(magrittr) # Version 2.0.3
   library(decontam) # Version 1.20.0
   library(nlme) # Version 3.1-163

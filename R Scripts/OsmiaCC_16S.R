@@ -14,15 +14,11 @@
   library(phyloseq) # Version 1.44.0
   library(vegan) # Version 2.6-4
   library(RVAideMemoire) # Version 0.9-83-7
-  library(microbiome) # Version 1.22.0
-  #library(knitr) # Version 1.45
   library(magrittr) # Version 2.0.3
   library(decontam) # Version 1.20.0
   library(nlme) # Version 3.1-163
-  library(grDevices) # Version 4.3.1
   library(RColorBrewer) # Version 1.1-3
   library(unikn) # Version 0.9.0
-  #library(dplyr) # Version 1.1.3
   library(DESeq2) # Version 1.40.2
 
 # Import data
@@ -43,6 +39,7 @@
   combo_treat <- samples$combo_treat
   sample_or_control <- samples$sample_or_control
   sex <- samples$sex
+  random_effect <- samples$random_effect
   sampleinfo <- data.frame(extractionID = extractionID, 
                            sample_type = sample_type, 
                            sampleID = sampleID,  
@@ -50,15 +47,20 @@
                            micro_treat = micro_treat, 
                            combo_treat = combo_treat, 
                            sample_or_control = sample_or_control,
-                           sex = sex)
+                           sex = sex,
+                           random_effect = random_effect)
   rownames(sampleinfo) <- samples.out
   
 # Format your data to work with phyloseq
   ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa))
   ps1
   
-# Summarize the phyloseq obj contents before processing
-  summarize_phyloseq(ps1)
+# Display total number of reads and means per sample in phyloseq obj before processing
+  sum(sample_sums(ps1))
+  mean(sample_sums(ps1))
+  
+# How many taxa were identified before processing
+  nrow(tax_table(ps1))
   
 ## Inspect & remove contaminants ----
 # Resource: https://benjjneb.github.io/decontam/vignettes/decontam_intro.html
@@ -152,14 +154,23 @@
   ps3 <- prune_samples(sample_data(ps3)$sex != "F", ps3)
   ps3
   
-# How many reads are in each sample? 
-  sample_sums(ps3)
-  
-# What is the mean number of reads in all samples?
+# Display total number of reads and means per sample in phyloseq obj after processing
+  sum(sample_sums(ps3))
   mean(sample_sums(ps3))
   
-# Summarize the phyloseq obj contents after processing
-  summarize_phyloseq(ps3)
+# How many taxa were identified after processing
+  nrow(tax_table(ps3))
+  
+# Save sample metadata
+  meta <- sample_data(ps3)
+  
+# How many total samples?
+  nrow(meta)
+  
+# How many samples for each developmental stage?  
+  meta %>%
+    group_by(sample_type, combo_treat) %>%
+    summarise(N = n())
   
 # Add Seq to each taxa name
   taxa_names(ps3) <- paste0("Seq", seq(ntaxa(ps3)))
@@ -192,6 +203,7 @@
   bactrich$temp_treat <- sample_data(ps3)$temp_treat
   bactrich$micro_treat <- sample_data(ps3)$micro_treat
   bactrich$combo_treat <- sample_data(ps3)$combo_treat
+  bactrich$random_effect <- sample_data(ps3)$random_effect
   
 # Plot Shannon, Simpson & observed richness  
   plot_richness(ps3, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
@@ -203,15 +215,15 @@
   bactrich <- bactrich[complete.cases(bactrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon diversity
-  mod1 <- lme(Shannon ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+  mod1 <- lme(Shannon ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
   anova(mod1)
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson diversity
-  mod2 <- lme(Simpson ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+  mod2 <- lme(Simpson ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
   anova(mod2)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod3 <- lme(Observed ~ temp_treat*micro_treat, random = ~1|sampleID, data = bactrich)
+  mod3 <- lme(Observed ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
   anova(mod3)
   
 # Reorder x-axis

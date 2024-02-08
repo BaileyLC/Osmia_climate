@@ -171,7 +171,11 @@
   meta %>%
     group_by(sample_type, combo_treat) %>%
     summarise(N = n())
-  
+
+# Save taxonomic and ASV counts
+  write.csv(tax_table(ps3), "OsmiaCC_16Staxa.csv")
+  write.csv(otu_table(ps3), "OsmiaCC_16Sotu.csv") 
+                                                       
 # Add Seq to each taxa name
   taxa_names(ps3) <- paste0("Seq", seq(ntaxa(ps3)))
   

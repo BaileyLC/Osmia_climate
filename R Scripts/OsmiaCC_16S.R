@@ -214,7 +214,7 @@
   bactrich <- bactrich[complete.cases(bactrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon diversity
-  mod1 <- nlm::lme(Shannon ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
+  mod1 <- nlme::lme(Shannon ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
   anova(mod1)
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson diversity

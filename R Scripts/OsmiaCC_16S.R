@@ -1,4 +1,4 @@
-##### Project: Osmia climate change
+##### Project: Osmia Climate Change
 
 #### Ownership: Bailey Crowley & Robert N. Schaeffer
 
@@ -17,7 +17,8 @@
   library(magrittr) # Version 2.0.3
   library(tidyverse) # Version 2.0.0
   library(decontam) # Version 1.20.0
-  library(nlme) # Version 3.1-163
+  library(lme4) # Version 1.1-35.1
+  library(emmeans) # Version 1.9.0
   library(RColorBrewer) # Version 1.1-3
   library(unikn) # Version 0.9.0
   library(DESeq2) # Version 1.40.2
@@ -40,7 +41,7 @@
   combo_treat <- samples$combo_treat
   sample_or_control <- samples$sample_or_control
   sex <- samples$sex
-  random_effect <- samples$random_effect
+  graft_stage <- samples$graft_stage
   sampleinfo <- data.frame(extractionID = extractionID, 
                            sample_type = sample_type, 
                            sampleID = sampleID,  
@@ -49,7 +50,7 @@
                            combo_treat = combo_treat, 
                            sample_or_control = sample_or_control,
                            sex = sex,
-                           random_effect = random_effect)
+                           graft_stage = graft_stage)
   rownames(sampleinfo) <- samples.out
   
 # Format your data to work with phyloseq
@@ -59,9 +60,6 @@
 # Display total number of reads and means per sample in phyloseq obj before processing
   sum(sample_sums(ps1))
   mean(sample_sums(ps1))
-  
-# How many taxa were identified before processing
-  nrow(tax_table(ps1))
   
 ## Inspect & remove contaminants ----
 # Resource: https://benjjneb.github.io/decontam/vignettes/decontam_intro.html
@@ -158,9 +156,6 @@
   sum(sample_sums(ps3))
   mean(sample_sums(ps3))
   
-# How many taxa were identified after processing
-  nrow(tax_table(ps3))
-  
 # Save sample metadata
   meta <- sample_data(ps3)
   
@@ -171,11 +166,11 @@
   meta %>%
     group_by(sample_type, combo_treat) %>%
     summarise(N = n())
-
+  
 # Save taxonomic and ASV counts
   write.csv(tax_table(ps3), "OsmiaCC_16Staxa.csv")
-  write.csv(otu_table(ps3), "OsmiaCC_16Sotu.csv") 
-                                                       
+  write.csv(otu_table(ps3), "OsmiaCC_16Sotu.csv")
+  
 # Add Seq to each taxa name
   taxa_names(ps3) <- paste0("Seq", seq(ntaxa(ps3)))
   
@@ -189,14 +184,14 @@
                                              sorted = 1:nsamples(ps3), 
                                              type = "Samples"))
   
-# Plot number of reads per sample
+# Plot number of reads per ASV and sample
   ggplot(readsumsdf, aes(x = sorted, y = nreads)) + 
     geom_bar(stat = "identity") +
     ggtitle("Total number of reads") + 
     scale_y_log10() + 
     facet_wrap(~ type, 1, scales = "free")
   
-## Species richness ----  
+## Alpha diversity ----  
   
 # Estimate Shannon, Simpson & observed richness
   bactrich <- phyloseq::estimate_richness(ps3, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
@@ -207,7 +202,7 @@
   bactrich$temp_treat <- sample_data(ps3)$temp_treat
   bactrich$micro_treat <- sample_data(ps3)$micro_treat
   bactrich$combo_treat <- sample_data(ps3)$combo_treat
-  bactrich$random_effect <- sample_data(ps3)$random_effect
+  bactrich$graft_stage <- sample_data(ps3)$graft_stage
   
 # Plot Shannon, Simpson & observed richness  
   phyloseq::plot_richness(ps3, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
@@ -219,16 +214,40 @@
   bactrich <- bactrich[complete.cases(bactrich), ]
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon diversity
-  mod1 <- nlme::lme(Shannon ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
+  mod1 <- lme4::lmer(Shannon ~ temp_treat * micro_treat + (1|graft_stage), data = bactrich)
   anova(mod1)
   
+# Pairwise comparisons by temperature treatment
+  emmeans(mod1, "micro_treat", by = "temp_treat")
+  pairs(emmeans(mod1, "micro_treat", by = "temp_treat"))
+  
+# Pairwise comparisons by microbiome treatment
+  emmeans(mod1, "temp_treat", by = "micro_treat")
+  pairs(emmeans(mod1, "temp_treat", by = "micro_treat"))
+  
 # Examine interactive effects of temperature and microbiome treatments on Simpson diversity
-  mod2 <- nlme::lme(Simpson ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
+  mod2 <- lme4::lmer(Simpson ~ temp_treat * micro_treat + (1|graft_stage), data = bactrich)
   anova(mod2)
   
+# Pairwise comparisons by temperature treatment
+  emmeans(mod2, "micro_treat", by = "temp_treat")
+  pairs(emmeans(mod2, "micro_treat", by = "temp_treat"))
+  
+# Pairwise comparisons by microbiome treatment
+  emmeans(mod2, "temp_treat", by = "micro_treat")
+  pairs(emmeans(mod2, "temp_treat", by = "micro_treat"))
+  
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod3 <- nlme::lme(Observed ~ temp_treat * micro_treat, random = ~1|random_effect, data = bactrich)
+  mod3 <- lme4::lmer(Observed ~ temp_treat * micro_treat + (1|graft_stage), data = bactrich)
   anova(mod3)
+  
+# Pairwise comparisons by temperature treatment
+  emmeans(mod3, "micro_treat", by = "temp_treat")
+  pairs(emmeans(mod3, "micro_treat", by = "temp_treat"))
+  
+# Pairwise comparisons by microbiome treatment
+  emmeans(mod3, "temp_treat", by = "micro_treat")
+  pairs(emmeans(mod3, "temp_treat", by = "micro_treat"))
   
 # Reorder x-axis
   bactrich$combo_treat <- factor(bactrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -294,6 +313,63 @@
                               ggtitle("A")
   OsmiaCC_Observed_bact
   
+## Beta diversity without rarefaction ----
+  
+# Create a distance matrix using Bray Curtis dissimilarity
+  bact_bray <- phyloseq::distance(ps3, method = "bray")
+  
+# Convert to data frame
+  samplebact <- data.frame(sample_data(ps3))
+  
+# Perform the PERMANOVA to test effects of developmental stage on bacterial community composition
+  bact_perm <- vegan::adonis2(bact_bray ~ temp_treat * micro_treat, strata = samplebact$graft_stage, data = samplebact)
+  bact_perm
+  
+# Follow up with pairwise comparisons - which sample types differ?
+  #bact_perm_BH <- RVAideMemoire::pairwise.perm.manova(bact_bray, samplebact$sample_type, p.method = "BH")
+  #bact_perm_BH
+  
+## Test for homogeneity of multivariate dispersion without rarefaction ----
+  
+# Calculate the average distance of group members to the group centroid
+  disp_bact <- vegan::betadisper(bact_bray, samplebact$combo_treat)
+  disp_bact
+  
+# Do any of the group dispersions differ?
+  disp_bact_an <- anova(disp_bact)
+  disp_bact_an
+  
+# Which group dispersions differ?
+  disp_bact_ttest <- vegan::permutest(disp_bact, 
+                                      control = permControl(nperm = 999),
+                                      pairwise = TRUE)
+  disp_bact_ttest
+  
+# Which group dispersions differ?
+  disp_bact_tHSD <- TukeyHSD(disp_bact)
+  disp_bact_tHSD
+  
+## Ordination without rarefaction ----
+  
+# Calculate the relative abundance of each otu  
+  ps.prop_bact <- phyloseq::transform_sample_counts(ps3, function(otu) otu/sum(otu))
+  
+# PCoA using Bray-Curtis distance
+  ord.pcoa.bray <- phyloseq::ordinate(ps.prop_bact, method = "PCoA", distance = "bray")
+  
+# Plot ordination
+  OsmiaCC_PCoA_bact <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
+                          theme_bw() +
+                          theme(legend.position = "none") +
+                          theme(text = element_text(size = 16)) +
+                          theme(legend.justification = "left", 
+                                legend.title = element_text(size = 16, colour = "black"), 
+                                legend.text = element_text(size = 14, colour = "black")) + 
+                          geom_point(size = 3) +
+                          scale_color_manual(values = c("#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
+                          labs(title = "A", color = "Treatment", shape = "Sample Type")
+  OsmiaCC_PCoA_bact
+
 ## Rarefaction ----
   
 # Produce rarefaction curves
@@ -317,62 +393,78 @@
   
 # Set seed and rarefy
   set.seed(1234)
-  rareps <- phyloseq::rarefy_even_depth(ps3, sample.size = 26)
+  rareps_bact <- phyloseq::rarefy_even_depth(ps3, sample.size = 30)
   
 # Create a distance matrix using Bray Curtis dissimilarity
-  bact_bray <- phyloseq::distance(rareps, method = "bray")
+  bact_bray_rare <- phyloseq::distance(rareps, method = "bray")
   
 # Convert to data frame
-  samplebact <- data.frame(sample_data(rareps))
+  samplebact_rare <- data.frame(sample_data(rareps_bact))
   
 # Perform the PERMANOVA to test effects of treatment on bacterial community composition  
-  bact_perm <- vegan::adonis2(bact_bray ~ temp_treat*micro_treat, data = samplebact)
-  bact_perm
+  bact_perm_rare <- vegan::adonis2(bact_bray_rare ~ temp_treat * micro_treat, strata = samplebact_rare$graft_stage, data = samplebact_rare)
+  bact_perm_rare
   
 # Follow up with pairwise comparisons - which sample types differ?
-  bact_perm_BH <- RVAideMemoire::pairwise.perm.manova(bact_bray, samplebact$sample_type, p.method = "BH")
-  bact_perm_BH
+  #bact_perm_rare_BH <- RVAideMemoire::pairwise.perm.manova(bact_bray_rare, samplebact_rare$sample_type, p.method = "BH")
+  #bact_perm_rare_BH
   
 ## Test for homogeneity of multivariate dispersion ----
   
-# Calculate the average distance of group members to the group centroid
-  disp_bact <- vegan::betadisper(bact_bray, samplebact$combo_treat)
-  disp_bact
+# Calculate the average distance of group members to the group centroid: combo_treat
+  disp_bact_rare <- vegan::betadisper(bact_bray_rare, samplebact_rare$combo_treat)
+  disp_bact_rare
   
 # Do any of the group dispersions differ?
-  disp_bact_an <- anova(disp_bact)
-  disp_bact_an
+  disp_bact_an_rare <- anova(disp_bact_rare)
+  disp_bact_an_rare
+  
+# Calculate the average distance of group members to the group centroid: just temperature treatment
+  disp_bact_temp_rare <- vegan::betadisper(bact_bray_rare, samplebact_rare$temp_treat)
+  disp_bact_temp_rare
+  
+# Do any of the group dispersions differ?  
+  disp_bact_temp_an_rare <- anova(disp_bact_temp_rare)
+  disp_bact_temp_an_rare
+  
+# Calculate the average distance of group members to the group centroid: just microbiome treatment
+  disp_bact_micro_rare <- vegan::betadisper(bact_bray_rare, samplebact_rare$micro_treat)
+  disp_bact_micro_rare
+  
+# Do any of the group dispersions differ?  
+  disp_bact_micro_an_rare <- anova(disp_bact_micro_rare)
+  disp_bact_micro_an_rare
   
 # Which group dispersions differ?
-  disp_bact_ttest <- vegan::permutest(disp_bact, 
-                                      control = permControl(nperm = 999),
-                                      pairwise = TRUE)
-  disp_bact_ttest
+  disp_bact_ttest_rare <- vegan::permutest(disp_bact_rare, 
+                                           control = permControl(nperm = 999),
+                                           pairwise = TRUE)
+  disp_bact_ttest_rare
   
 # Which group dispersions differ?
-  disp_bact_tHSD <- TukeyHSD(disp_bact)
-  disp_bact_tHSD  
+  disp_bact_tHSD_rare <- TukeyHSD(disp_bact_rare)
+  disp_bact_tHSD_rare
   
-## Ordination ----
+## Ordination with rarefied data ----
   
 # Calculate the relative abundance of each otu  
-  ps.prop <- phyloseq::transform_sample_counts(ps3, function(otu) otu/sum(otu))
+  ps.prop_rare <- phyloseq::transform_sample_counts(rareps_bact, function(otu) otu/sum(otu))
   
 # PCoA using Bray-Curtis distance
-  ord.pcoa.bray <- phyloseq::ordinate(ps.prop, method = "PCoA", distance = "bray")
+  ord.pcoa.bray_rare <- phyloseq::ordinate(ps.prop_rare, method = "PCoA", distance = "bray")
   
 # Plot ordination
-  OsmiaCC_PCoA_bact <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
-                          theme_bw() +
-                          theme(legend.position = "none") +
-                          theme(text = element_text(size = 16)) +
-                          theme(legend.justification = "left", 
-                                legend.title = element_text(size = 16, colour = "black"), 
-                                legend.text = element_text(size = 14, colour = "black")) + 
-                          geom_point(size = 3) +
-                          scale_color_manual(values = c("#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
-                          labs(title = "A", color = "Treatment", shape = "Sample Type")
-  OsmiaCC_PCoA_bact
+  OsmiaCC_PCoA_bact_rare <- plot_ordination(ps.prop_rare, ord.pcoa.bray_rare, color = "combo_treat", shape = "sample_type") + 
+                                theme_bw() +
+                                theme(legend.position = "none") +
+                                theme(text = element_text(size = 16)) +
+                                theme(legend.justification = "left", 
+                                      legend.title = element_text(size = 16, colour = "black"), 
+                                      legend.text = element_text(size = 14, colour = "black")) + 
+                                geom_point(size = 3) +
+                                scale_color_manual(values = c("#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
+                                labs(title = "A", color = "Treatment", shape = "Sample Type")
+  OsmiaCC_PCoA_bact_rare
   
 ## Stacked community plot ----
   
@@ -452,7 +544,6 @@
   y6 <- phyloseq::psmelt(y5)
   y6$Genus <- as.character(y6$Genus)
   y6$Genus[y6$Abundance < 0.01] <- "Genera < 1% abund."
-  write.csv(y6, file = "y6.csv")
   y6$Genus <- as.factor(y6$Genus)
   head(y6)
   
@@ -509,7 +600,7 @@
     guides(fill = guide_legend(ncol = 2)) +
     ggtitle("Bacteria")
 
-## Differential abundance ----
+## Differential abundance without rarefaction ----
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
 
 # Convert from a phyloseq to a deseq obj
@@ -573,4 +664,69 @@
   
 # Check to see if any padj is below alpha
   WN_CN_p05
+  
+## Differential abundance with rarefied data ----
+# Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
+  
+# Convert from a phyloseq to a deseq obj
+  desq_obj_rare <- phyloseq::phyloseq_to_deseq2(rareps_bact, ~ combo_treat)
+  
+# Calculate the geometric mean and remove rows with NA
+  gm_mean <- function(x, na.rm = TRUE) {
+    exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+  }
+  
+# Add a count of 1 to all geometric means
+  geoMeans <- apply(counts(desq_obj_rare), 1, gm_mean)
+  
+# Estimate size factors
+  desq_dds_rare <- DESeq2::estimateSizeFactors(desq_obj_rare, geoMeans = geoMeans)
+  
+# Fit a local regression
+  desq_dds_rare <- DESeq2::DESeq(desq_dds_rare, fitType = "local")
+  
+# Set significance factor  
+  alpha <- 0.05
+  
+# WN vs AN
+  
+# Extract results from differential abundance table for initial vs final provision
+  WN_AN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "WN", "AN"))
+  
+# Order differential abundances by their padj value
+  WN_AN_rare <- WN_AN_rare[order(WN_AN_rare$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  WN_AN_rare_p05 <- WN_AN_rare[(WN_AN_rare$padj < alpha & !is.na(WN_AN_rare$padj)), ]
+  
+# Check to see if any padj is below alpha
+  WN_AN_rare_p05
+  
+# AN vs CN
+  
+# Extract results from differential abundance table for initial vs final provision
+  AN_CN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "AN", "CN"))
+  
+# Order differential abundances by their padj value
+  AN_CN_rare <- AN_CN_rare[order(AN_CN_rare$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  AN_CN_rare_p05 <- AN_CN_rare[(AN_CN_rare$padj < alpha & !is.na(AN_CN_rare$padj)), ]
+  
+# Check to see if any padj is below alpha
+  AN_CN_rare_p05
+  
+# WN vs CN
+
+# Extract results from differential abundance table for initial vs final provision
+  WN_CN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "WN", "CN"))
+
+# Order differential abundances by their padj value
+  WN_CN_rare <- WN_CN_rare[order(WN_CN_rare$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  WN_CN_rare_p05 <- WN_CN_rare[(WN_CN_rare$padj < alpha & !is.na(WN_CN_rare$padj)), ]
+  
+# Check to see if any padj is below alpha
+  WN_CN_rare_p05
   

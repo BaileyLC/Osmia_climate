@@ -1,4 +1,4 @@
-##### Project: Osmia climate change
+##### Project: Osmia Climate Change
 
 #### Ownership: Bailey Crowley & Robert N. Schaeffer
 

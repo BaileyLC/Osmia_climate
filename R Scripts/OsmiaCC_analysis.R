@@ -2,7 +2,7 @@
 
 #### Ownership: Bailey Crowley & Robert N. Schaeffer
 
-### Purpose - Analyze health and life history data
+### Purpose - Analyze microclimate, health, and life history data
 
 ## Prepare work space ----
 

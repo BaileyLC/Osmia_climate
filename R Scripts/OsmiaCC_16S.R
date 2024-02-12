@@ -18,7 +18,7 @@
   library(tidyverse) # Version 2.0.0
   library(decontam) # Version 1.20.0
   library(lme4) # Version 1.1-35.1
-  library(emmeans) # Version 1.9.0
+  library(emmeans) # Version 1.10.0
   library(RColorBrewer) # Version 1.1-3
   library(unikn) # Version 0.9.0
   library(DESeq2) # Version 1.40.2
@@ -339,6 +339,22 @@
   disp_bact_an <- anova(disp_bact)
   disp_bact_an
   
+# Calculate the average distance of group members to the group centroid: just temperature treatment
+  disp_bact_temp <- vegan::betadisper(bact_bray, samplebact$temp_treat)
+  disp_bact_temp
+  
+# Do any of the group dispersions differ?  
+  disp_bact_temp_an <- anova(disp_bact_temp)
+  disp_bact_temp_an
+  
+# Calculate the average distance of group members to the group centroid: just microbiome treatment
+  disp_bact_micro <- vegan::betadisper(bact_bray, samplebact$micro_treat)
+  disp_bact_micro
+  
+# Do any of the group dispersions differ?  
+  disp_bact_micro_an <- anova(disp_bact_micro)
+  disp_bact_micro_an
+  
 # Which group dispersions differ?
   disp_bact_ttest <- vegan::permutest(disp_bact, 
                                       control = permControl(nperm = 999),
@@ -358,7 +374,7 @@
   ord.pcoa.bray <- phyloseq::ordinate(ps.prop_bact, method = "PCoA", distance = "bray")
   
 # Plot ordination
-  OsmiaCC_PCoA_bact <- plot_ordination(ps.prop, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
+  OsmiaCC_PCoA_bact <- plot_ordination(ps.prop_bact, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
                           theme_bw() +
                           theme(legend.position = "none") +
                           theme(text = element_text(size = 16)) +
@@ -396,7 +412,7 @@
   rareps_bact <- phyloseq::rarefy_even_depth(ps3, sample.size = 30)
   
 # Create a distance matrix using Bray Curtis dissimilarity
-  bact_bray_rare <- phyloseq::distance(rareps, method = "bray")
+  bact_bray_rare <- phyloseq::distance(rareps_bact, method = "bray")
   
 # Convert to data frame
   samplebact_rare <- data.frame(sample_data(rareps_bact))
@@ -476,7 +492,7 @@
   colors <- sample(okabe_ext)
   
 # Sort data by Family
-  y1 <- phyloseq::tax_glom(rareps, taxrank = 'Family') # agglomerate taxa
+  y1 <- phyloseq::tax_glom(rareps_bact, taxrank = 'Family') # agglomerate taxa
   y2 <- phyloseq::transform_sample_counts(y1, function(x) x/sum(x))
   y3 <- phyloseq::psmelt(y2)
   y3$Family <- as.character(y3$Family)
@@ -539,7 +555,7 @@
     ggtitle("Bacteria")
   
 # Sort data by Genus
-  y4 <- phyloseq::tax_glom(rareps, taxrank = 'Genus') # agglomerate taxa
+  y4 <- phyloseq::tax_glom(rareps_bact, taxrank = 'Genus') # agglomerate taxa
   y5 <- phyloseq::transform_sample_counts(y4, function(x) x/sum(x))
   y6 <- phyloseq::psmelt(y5)
   y6$Genus <- as.character(y6$Genus)

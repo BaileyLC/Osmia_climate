@@ -177,8 +177,8 @@
     summarise(N = n())
   
 # Save taxonomic and ASV counts
-  write.csv(tax_table(ps3), "OsmiaCC_ITStaxa.csv")
-  write.csv(otu_table(ps3), "OsmiaCC_ITSotu.csv")
+  write.csv(tax_table(ps4), "OsmiaCC_ITStaxa.csv")
+  write.csv(otu_table(ps4), "OsmiaCC_ITSotu.csv")
   
 # Add Seq to each taxa name
   taxa_names(ps4) <- paste0("Seq", seq(ntaxa(ps4)))

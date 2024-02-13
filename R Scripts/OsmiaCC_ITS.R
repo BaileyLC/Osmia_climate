@@ -14,7 +14,7 @@
   library(phyloseq) # Version 1.44.0
   library(vegan) # Version 2.6-4
   library(magrittr) # Version 2.0.3
-  library(tidyverse) # Version 2.0.0
+  library(tidyverse) # Version 1.2.0
   library(decontam) # Version 1.20.0
   library(lme4) # Version 1.1-35.1
   library(emmeans) # Version 1.10.0

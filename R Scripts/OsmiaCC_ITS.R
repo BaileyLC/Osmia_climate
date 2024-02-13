@@ -110,7 +110,7 @@
   
 # Determine which ASVs are contaminants based on prevalence (presence/absence) in negative controls
   sample_data(ps3)$is.neg <- sample_data(ps3)$sample_or_control == "control"
-  contamdf.prev <- decontam::isContaminant(ps3, method = "prevalence", neg = "is.neg")
+  contamdf.prev <- decontam::isContaminant(ps3, method = "prevalence", neg = "is.neg", threshold = 0.1)
   
 # How many contaminants are there?
   table(contamdf.prev$contaminant)
@@ -226,29 +226,22 @@
   mod4 <- lme4::lmer(Shannon ~ temp_treat * micro_treat + (1|graft_stage), data = fungrich)
   anova(mod4)
   
-# Pairwise comparisons by temperature treatment
-  emmeans(mod4, "micro_treat", by = "temp_treat")
-  pairs(emmeans(mod4, "micro_treat", by = "temp_treat"))
-  
-# Pairwise comparisons by microbiome treatment
-  emmeans(mod4, "temp_treat", by = "micro_treat")
-  pairs(emmeans(mod4, "temp_treat", by = "micro_treat"))
+# Pairwise comparisons  
+  emmeans(mod4, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson richness
   mod5 <- lme4::lmer(Simpson ~ temp_treat * micro_treat + (1|graft_stage), data = fungrich)
   anova(mod5)
   
-# Pairwise comparisons by temperature treatment
-  emmeans(mod5, "micro_treat", by = "temp_treat")
-  pairs(emmeans(mod5, "micro_treat", by = "temp_treat"))
-  
-# Pairwise comparisons by microbiome treatment
-  emmeans(mod5, "temp_treat", by = "micro_treat")
-  pairs(emmeans(mod5, "temp_treat", by = "micro_treat"))
+# Pairwise comparisons  
+  emmeans(mod5, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
   mod6 <- lme4::lmer(Observed ~ temp_treat * micro_treat + (1|graft_stage), data = fungrich)
   anova(mod6)
+  
+# Pairwise comparisons  
+  #emmeans(mod6, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
 # Reorder x-axis
   fungrich$combo_treat <- factor(fungrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -256,7 +249,7 @@
 # New names for facet_grid
   type_names <- c('final provision' = "provisions with bee",
                   'provision w/o bee' = "provisions without bee")
-  
+
 # Boxplot of Shannon index
   OsmiaCC_Shannon_fungi <- ggplot(fungrich, aes(x = combo_treat, y = Shannon, fill = combo_treat)) + 
                               geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
@@ -308,10 +301,13 @@
                               ylab("Observed richness")
   OsmiaCC_Observed_fungi
   
-## Beta diversity without rarefaction ----
+## Beta diversity with relative abundance data ----
+  
+# Calculate the relative abundance of each otu  
+  ps.prop_fung <- phyloseq::transform_sample_counts(ps4, function(otu) otu/sum(otu))
   
 # Create a distance matrix using Bray Curtis dissimilarity
-  fung_bray <- phyloseq::distance(ps4, method = "bray")
+  fung_bray <- phyloseq::distance(ps.prop_fung, method = "bray")
   
 # Convert to data frame
   samplefung <- data.frame(sample_data(ps4))
@@ -321,8 +317,8 @@
   fung_perm
   
 # Follow up with pairwise comparisons - which sample types differ?
-  #fung_perm_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray, samplefung$sample_type, p.method = "BH")
-  #fung_perm_BH
+  fung_perm_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray, samplefung$combo_treat, p.method = "BH")
+  fung_perm_BH
   
 ## Test for homogeneity of multivariate dispersion without rarefaction ----
   
@@ -360,10 +356,7 @@
   disp_fung_tHSD <- TukeyHSD(disp_fung)
   disp_fung_tHSD  
   
-## Ordination without rarefaction ----
-  
-# Calculate the relative abundance of each otu  
-  ps.prop_fung <- phyloseq::transform_sample_counts(ps4, function(otu) otu/sum(otu))
+## Ordination with relative abundance data ----
   
 # PCoA using Bray-Curtis distance
   ord.pcoa.bray_fung <- phyloseq::ordinate(ps.prop_fung, method = "PCoA", distance = "bray")
@@ -388,7 +381,7 @@
   class(tab) <- "matrix"
   tab <- t(tab)
   
-# Save rarefaction data as a "tidy" df
+# Save rarefaction data as a tidy df
   rare_tidy_fungi <- vegan::rarecurve(tab, label = FALSE, tidy = TRUE)
   
 # Plot rarefaction curve
@@ -407,7 +400,7 @@
   fung_rareps <- rarefy_even_depth(ps4, sample.size = 11)
   
 # Perform PERMANOVA to test effects of treatments on bacterial community composition
-  fung_bray_rare <- phyloseq::distance(fung_rareps, method="bray")
+  fung_bray_rare <- phyloseq::distance(fung_rareps, method = "bray")
   
 # Convert to data frame
   samplefung_rare <- data.frame(sample_data(fung_rareps))
@@ -416,6 +409,10 @@
   fung_perm_rare <- vegan::adonis2(fung_bray_rare ~ temp_treat * micro_treat, strata = samplefung_rare$graft_stage, data = samplefung_rare)
   fung_perm_rare
   
+# Follow up with pairwise comparisons - which sample types differ? microbiome treatment only
+  fung_perm_rare_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray_rare, samplefung_rare$micro_treat, p.method = "BH")
+  fung_perm_rare_BH
+
 ## Test for homogeneity of multivariate dispersion ----
   
 # Calculate the average distance of group members to the group centroid
@@ -604,7 +601,7 @@
     guides(fill = guide_legend(ncol = 2)) +
     ggtitle("Fungi")
 
-## Differential abundance ----
+## Differential abundance with raw data ----
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
   
 # Remove patterns in tax_table   
@@ -671,3 +668,68 @@
   
 # Check to see if any padj is below alpha
   WN_CN_p05
+  
+## Differential abundance with rarefied data ----
+# Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
+  
+# Convert from a phyloseq to a deseq obj
+  desq_obj_rare <- phyloseq::phyloseq_to_deseq2(fung_rareps, ~ combo_treat)
+  
+# Calculate the geometric mean and remove rows with NA
+  gm_mean <- function(x, na.rm = TRUE) {
+    exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+  }
+  
+# Add a count of 1 to all geometric means
+  geoMeans <- apply(counts(desq_obj_rare), 1, gm_mean)
+  
+# Estimate size factors
+  desq_dds_rare <- DESeq2::estimateSizeFactors(desq_obj_rare, geoMeans = geoMeans)
+  
+# Fit a local regression
+  desq_dds_rare <- DESeq2::DESeq(desq_dds_rare, fitType = "local")
+  
+# Set significance factor  
+  alpha <- 0.05
+  
+# WN vs AN
+  
+# Extract results from differential abundance table for initial vs final provision
+  WN_AN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "WN", "AN"))
+  
+# Order differential abundances by their padj value
+  WN_AN_rare <- WN_AN_rare[order(WN_AN_rare$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  WN_AN_rare_p05 <- WN_AN_rare[(WN_AN_rare$padj < alpha & !is.na(WN_AN_rare$padj)), ]
+  
+# Check to see if any padj is below alpha
+  WN_AN_rare_p05
+  
+# AN vs CN
+  
+# Extract results from differential abundance table for initial vs final provision
+  AN_CN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "AN", "CN"))
+  
+# Order differential abundances by their padj value
+  AN_CN_rare <- AN_CN_rare[order(AN_CN_rare$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  AN_CN_rare_p05 <- AN_CN_rare[(AN_CN_rare$padj < alpha & !is.na(AN_CN_rare$padj)), ]
+  
+# Check to see if any padj is below alpha
+  AN_CN_rare_p05
+  
+# WN vs CN
+  
+# Extract results from differential abundance table for initial vs final provision
+  WN_CN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "WN", "CN"))
+  
+# Order differential abundances by their padj value
+  WN_CN_rare <- WN_CN_rare[order(WN_CN_rare$padj, na.last = NA), ]
+  
+# Filter data to only include padj < alpha and remove NAs
+  WN_CN_rare_p05 <- WN_CN_rare[(WN_CN_rare$padj < alpha & !is.na(WN_CN_rare$padj)), ]
+  
+# Check to see if any padj is below alpha
+  WN_CN_rare_p05

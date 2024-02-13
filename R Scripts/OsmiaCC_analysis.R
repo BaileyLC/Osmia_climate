@@ -15,18 +15,16 @@
   library(lme4) # Version 1.1-35.1
   library(effects) # Version 4.2-2
   library(ggplot2) # Version 3.4.3
-  library(multcompView) # Version 0.1-9
-  library(ggsignif) # Version 0.6.4
   library(patchwork) # Version 1.1.3
   library(cowplot) # Version 1.1.1
   library(knitr) # Version 1.45
-  library(dplyr) # Version 1.1.3
-  library(survival) # Version 3.5-7
   library(tibble) # Version 3.2.1
+  library(survival) # Version 3.5-7
   library(ggsurvfit) # Version 1.0.0
   library(gtsummary) # Version 1.7.2
+  library(coxme) # Version 2.2-18.1
   library(car) # Version 2.1-2
-  library(emmeans) # Version 1.8.9
+  library(emmeans) # Version 1.10.0
   library(lmtest) # Version 0.9-40
   library(survMisc) # Version 0.5.6
 
@@ -122,11 +120,11 @@
   gau_mass <- lme4::lmer(wet_mass_mg ~ micro_treat * temp_treat + (1|graft_stage), data = males_health_mass)
  
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
-  qqnorm(resid(gau_mass, type = "pearson"))
-  qqline(resid(gau_mass, type = "pearson"))
-  shapiro.test(resid(gau_mass))
+  stats::qqnorm(resid(gau_mass, type = "pearson"))
+  stats::qqline(resid(gau_mass, type = "pearson"))
+  stats::shapiro.test(resid(gau_mass))
   
-# LMM output  
+# LMM output
   summary(gau_mass)
   
 # Pairwise comparisons by temperature treatment
@@ -166,9 +164,9 @@
   gau_fat <- lme4::lmer(prop_body_fat ~ micro_treat * temp_treat + (1|graft_stage), data = males_health_fat)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
-  qqnorm(resid(gau_fat, type = "pearson"))
-  qqline(resid(gau_fat, type = "pearson"))
-  shapiro.test(resid(gau_fat))
+  stats::qqnorm(resid(gau_fat, type = "pearson"))
+  stats::qqline(resid(gau_fat, type = "pearson"))
+  stats::shapiro.test(resid(gau_fat))
   
 # LMM output
   summary(gau_fat)
@@ -209,9 +207,9 @@
   gau_dur <- lme4::lmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), data = males_duration)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
-  qqnorm(resid(gau_dur, type = "pearson"))
-  qqline(resid(gau_dur, type = "pearson"))
-  shapiro.test(resid(gau_dur))
+  stats::qqnorm(resid(gau_dur, type = "pearson"))
+  stats::qqline(resid(gau_dur, type = "pearson"))
+  stats::shapiro.test(resid(gau_dur))
   
 # LMM output  
   #summary(gau_dur)
@@ -243,28 +241,39 @@
 
 ## Mortality ----
 
+# How many bees form each treatment died within 48 h of grafting?
+  males_mortality_graft <- males_mortality %>%
+    filter(date > '6/8/2023') %>%
+    group_by(combo_treat) %>%
+    tally()
+  males_mortality_graft
+   
+# Remove bees that died within 48 hr of grafting
+  males_mortality48 <- males_mortality %>%
+    filter(date < '6/8/2023')
+  
 # Determine sample sizes of males by treatment
-  males_mortality_ss <- males_mortality %>%
+  males_mortality_ss <- males_mortality48 %>%
     group_by(combo_treat) %>%
     tally()
   males_mortality_ss
   
 # Add sample sizes per treatment
-  males_mortality_ss$N <- rep(30, times = 6)
+  males_mortality_ss$N <- c(29, 29, 29, 29, 30, 30)
   males_mortality_ss
 
 # Add column and calculate percent mortality   
   males_mortality_ss$per_mort <- males_mortality_ss$n/males_mortality_ss$N
   males_mortality_ss
 
-## Survivorship analysis ----
-# Resource: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html  
+## Survivorship analyses ----
+# Resource: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html
 # NOTE: Status: 0 = survival to the fifth instar; 1 = death
   
-# Recreate originial df because NAs were removed above during analysis of larval development
+# Recreate original df because NAs were removed above during analysis of larval development
   duration <- read.csv("life_history - Data.csv")
   males_duration <- duration[duration$sex == "M", ]
-  
+
 # Convert character to date
   males_duration <- males_duration %>%
     mutate(
@@ -295,10 +304,10 @@
 # NOTE: The analyses below includes bees that died within the first 48 h after grafting  
   
 # Create a survival object
-  Surv(males_duration$total_surv_days, males_duration$status)
+  survival::Surv(males_duration$total_surv_days, males_duration$status)
 
 # Fit the survival curve
-  s2 <- survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+  s2 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
   summary(s2)
   
 # Display median survival time by combo_treat
@@ -322,17 +331,15 @@
     summarize(median_surv = median(total_surv_days),
               st_dev_surv = sd(total_surv_days))
   
-# Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
-  survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+# Log-rank test to compare survival times between groups to expected survival time (assumes risk of death to be same across time)
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
   
 # Cox regression model to compare survival times between groups (allows risk of death to vary across time)
-  cox_model1 <- coxph(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration)
+  cox_model1 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males_duration)
   summary(cox_model1)
   
 # Test the proportional hazards assumption
-  par(mfrow = c(2, 1))
-
-  cz1 <- cox.zph(cox_model1)
+  cz1 <- survival::cox.zph(cox_model1)
   print(cz1)
   plot (cz1)
   
@@ -343,10 +350,10 @@
     filter(date_last_alive > '2023-06-08')
   
 # Create a survival object
-  Surv(males_duration48$total_surv_days, males_duration48$status)
+  survival::Surv(males_duration48$total_surv_days, males_duration48$status)
   
 # Fit the survival curve
-  s3 <- survfit2(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration48)
+  s3 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
   summary(s3)
   
 # Display median survival time by combo_treat
@@ -370,21 +377,31 @@
     summarize(median_surv = median(total_surv_days),
               st_dev_surv = sd(total_surv_days))
   
-# Log-rank test to compare survival times between groups (assumes risk of death to be same across time)
-  survdiff(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration48)
+# Log-rank test to compare survival times between groups
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48, rho = 0)
   
-# Cox regression model to compare survival times between groups (allows risk of death to vary across time)
-  cox_model2 <- coxph(Surv(total_surv_days, status) ~ temp_treat * micro_treat, data = males_duration48)
+# Cox regression model to compare survival times between groups
+  cox_model2 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males_duration48)
   summary(cox_model2)
 
 # Test the proportional hazards assumption
-  par(mfrow = c(2, 1))
-  
-  cz2 <- cox.zph(cox_model2)
+  cz2 <- survival::cox.zph(cox_model2)
   print(cz2)
   plot (cz2)
   
-## Plots ----  
+# Gehan-Breslow generalized Wilcoxon test to compare survival times between groups
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48, rho = 1)
+  
+# Cox regression model to compare survival times between groups
+  cox_model3 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males_duration48)
+  summary(cox_model3)
+  
+# Test the proportional hazards assumption
+  cz3 <- survival::cox.zph(cox_model3)
+  print(cz3)
+  plot(cz3)
+
+## Plotting ----  
 
 # Temperature treatments
   

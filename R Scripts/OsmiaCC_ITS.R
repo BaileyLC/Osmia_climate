@@ -16,7 +16,7 @@
   library(magrittr) # Version 2.0.3
   library(tidyverse) # Version 1.2.0
   library(decontam) # Version 1.20.0
-  library(lme4) # Version 1.1-35.1
+  library(nlme) # Version 3.1-164
   library(emmeans) # Version 1.10.0
   library(RColorBrewer) # Version 1.1-3
   library(unikn) # Version 0.9.0
@@ -222,30 +222,21 @@
   fungrich[fungrich == 0] <- NA
   fungrich <- fungrich[complete.cases(fungrich), ]
   
-# Examine interactive effects of temperature and microbiome treatments on Shannon richness
-  mod4 <- lme4::lmer(Shannon ~ temp_treat * micro_treat + (1|graft_stage), data = fungrich)
+# Examine interactive effects of temperature and microbiome treatments on Shannon diversity
+  mod4 <- nlme::lme(Shannon ~ temp_treat * micro_treat, random = ~1|graft_stage, data = fungrich)
   anova(mod4)
   
-# Pairwise comparisons  
-  emmeans(mod4, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
-  
-# Examine interactive effects of temperature and microbiome treatments on Simpson richness
-  mod5 <- lme4::lmer(Simpson ~ temp_treat * micro_treat + (1|graft_stage), data = fungrich)
+# Examine interactive effects of temperature and microbiome treatments on Simpson diversity
+  mod5 <- nlme::lme(Simpson ~ temp_treat * micro_treat, random = ~1|graft_stage, data = fungrich)
   anova(mod5)
   
-# Pairwise comparisons  
-  emmeans(mod5, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
-  
 # Examine interactive effects of temperature and microbiome treatments on observed richness
-  mod6 <- lme4::lmer(Observed ~ temp_treat * micro_treat + (1|graft_stage), data = fungrich)
+  mod6 <- nlme::lme(Simpson ~ temp_treat * micro_treat, random = ~1|graft_stage, data = fungrich)
   anova(mod6)
-  
-# Pairwise comparisons  
-  #emmeans(mod6, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
 # Reorder x-axis
   fungrich$combo_treat <- factor(fungrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
-  
+
 # New names for facet_grid
   type_names <- c('final provision' = "provisions with bee",
                   'provision w/o bee' = "provisions without bee")
@@ -313,12 +304,35 @@
   samplefung <- data.frame(sample_data(ps4))
   
 # Perform the PERMANOVA to test effects of developmental stage on bacterial community composition
-  fung_perm <- vegan::adonis2(fung_bray ~ temp_treat * micro_treat, strata = samplefung$graft_stage, data = samplefung)
+  fung_perm <- vegan::adonis2(fung_bray ~ temp_treat * micro_treat, data = samplefung)
   fung_perm
   
-# Follow up with pairwise comparisons - which sample types differ?
-  fung_perm_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray, samplefung$combo_treat, p.method = "BH")
-  fung_perm_BH
+# Follow up with pairwise comparisons - which sample types differ? by temperature treatment
+  fung_perm_temp_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray, samplefung$temp_treat, p.method = "BH")
+  fung_perm_temp_BH
+  
+# Follow up with pairwise comparisons - which sample types differ? by microbiome treatment  
+  fung_perm_micro_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray, samplefung$micro_treat, p.method = "BH")
+  fung_perm_micro_BH
+  
+# Set permutations to deal with pseudoreplication of bee nests
+  perm_relabund <- how(within = Within(type = "free"),
+                       plots = Plots(type = "none"),
+                       blocks = samplefung$graft_stage,
+                       observed = FALSE,
+                       complete = FALSE)
+  
+# Perform the PERMANOVA to test effects of developmental stage on bacterial community composition, dealing with pseudoreplication
+  fung_perm <- vegan::adonis2(fung_bray ~ temp_treat * micro_treat, permutations = perm_relabund, data = samplefung)
+  fung_perm
+  
+# Follow up with pairwise comparisons - which sample types differ? by temperature treatment
+  fung_perm_temp_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray, samplefung$temp_treat, p.method = "BH")
+  fung_perm_temp_BH
+  
+# Follow up with pairwise comparisons - which sample types differ? by microbiome treatment  
+  fung_perm_micro_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray, samplefung$micro_treat, p.method = "BH")
+  fung_perm_micro_BH
   
 ## Test for homogeneity of multivariate dispersion without rarefaction ----
   
@@ -353,7 +367,7 @@
   disp_fung_ttest
   
 # Which group dispersions differ?
-  disp_fung_tHSD <- TukeyHSD(disp_fung)
+  disp_fung_tHSD <- stats::TukeyHSD(disp_fung)
   disp_fung_tHSD  
   
 ## Ordination with relative abundance data ----
@@ -406,7 +420,22 @@
   samplefung_rare <- data.frame(sample_data(fung_rareps))
   
 # Perform the PERMANOVA to test effects of treatment on bacterial community composition 
-  fung_perm_rare <- vegan::adonis2(fung_bray_rare ~ temp_treat * micro_treat, strata = samplefung_rare$graft_stage, data = samplefung_rare)
+  fung_perm_rare <- vegan::adonis2(fung_bray_rare ~ temp_treat * micro_treat, data = samplefung_rare)
+  fung_perm_rare
+  
+# Follow up with pairwise comparisons - which sample types differ? microbiome treatment only
+  fung_perm_rare_BH <- RVAideMemoire::pairwise.perm.manova(fung_bray_rare, samplefung_rare$micro_treat, p.method = "BH")
+  fung_perm_rare_BH
+  
+# Set permutations to deal with pseudoreplication of bee nests
+  perm_rare <- how(within = Within(type = "free"),
+                   plots = Plots(type = "none"),
+                   blocks = samplefung_rare$graft_stage,
+                   observed = FALSE,
+                   complete = FALSE)
+  
+# Perform the PERMANOVA to test effects of treatment on bacterial community composition 
+  fung_perm_rare <- vegan::adonis2(fung_bray_rare ~ temp_treat * micro_treat, permutations = perm_rare, data = samplefung_rare)
   fung_perm_rare
   
 # Follow up with pairwise comparisons - which sample types differ? microbiome treatment only
@@ -446,7 +475,7 @@
   disp_fung_ttest_rare
   
 # Which group dispersions differ?
-  disp_fung_tHSD_rare <- TukeyHSD(disp_fung_rare)
+  disp_fung_tHSD_rare <- stats::TukeyHSD(disp_fung_rare)
   disp_fung_tHSD_rare
   
 ## Ordination ----

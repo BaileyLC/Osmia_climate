@@ -34,71 +34,76 @@
 ## Create phyloseq objects for each ITS run ----
 
 # Re-create your df
-  samples.out <- rownames(seqtab.nochim1)
-  samples <- data.frame(metaITS_CC_run1)
-  extractionID <- samples$extractionID
-  sample_type <- samples$sample_type
-  sampleID <- samples$sampleID
-  temp_treat <- samples$temp_treat
-  micro_treat <- samples$micro_treat
-  combo_treat <- samples$combo_treat
-  sample_or_control <- samples$sample_or_control
-  sex <- samples$sex
-  graft_stage <- samples$graft_stage
-  sampleinfo <- data.frame(extractionID = extractionID, 
-                           sample_type = sample_type, 
-                           sampleID = sampleID,  
-                           temp_treat = temp_treat, 
-                           micro_treat = micro_treat, 
-                           combo_treat = combo_treat, 
-                           sample_or_control = sample_or_control,
-                           sex = sex,
-                           graft_stage = graft_stage)
-  rownames(sampleinfo) <- samples.out
+  samples.out1 <- rownames(seqtab.nochim1)
+  samples1 <- data.frame(metaITS_CC_run1)
+  extractionID <- samples1$extractionID
+  sample_type <- samples1$sample_type
+  sampleID <- samples1$sampleID
+  temp_treat <- samples1$temp_treat
+  micro_treat <- samples1$micro_treat
+  combo_treat <- samples1$combo_treat
+  sample_or_control <- samples1$sample_or_control
+  sex <- samples1$sex
+  graft_stage <- samples1$graft_stage
+  DNA_conc <- samples1$DNA_conc
+  sampleinfo1 <- data.frame(extractionID = extractionID, 
+                            sample_type = sample_type, 
+                            sampleID = sampleID,  
+                            temp_treat = temp_treat, 
+                            micro_treat = micro_treat, 
+                            combo_treat = combo_treat, 
+                            sample_or_control = sample_or_control,
+                            sex = sex,
+                            graft_stage = graft_stage,
+                            DNA_conc = DNA_conc)
+  rownames(sampleinfo1) <- samples.out1
 
 # Format your data to work with phyloseq
-  ps1 <- phyloseq(otu_table(seqtab.nochim1, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa1))
+  ps1 <- phyloseq(otu_table(seqtab.nochim1, taxa_are_rows = FALSE), sample_data(sampleinfo1), tax_table(taxa1))
   ps1
   
 # Re-create your df
-  samples.out <- rownames(seqtab.nochim2)
-  samples <- data.frame(metaITS_CC_run2)
-  extractionID <- samples$extractionID
-  sample_type <- samples$sample_type
-  sampleID <- samples$sampleID
-  temp_treat <- samples$temp_treat
-  micro_treat <- samples$micro_treat
-  combo_treat <- samples$combo_treat
-  sample_or_control <- samples$sample_or_control
-  sex <- samples$sex
-  graft_stage <- samples$graft_stage
-  sampleinfo <- data.frame(extractionID = extractionID,
-                           sample_type = sample_type,
-                           sampleID = sampleID,
-                           temp_treat = temp_treat,
-                           micro_treat = micro_treat,
-                           combo_treat = combo_treat,
-                           sample_or_control = sample_or_control,
-                           sex = sex,
-                           graft_stage = graft_stage)
-  rownames(sampleinfo) <- samples.out
+  samples.out2 <- rownames(seqtab.nochim2)
+  samples2 <- data.frame(metaITS_CC_run2)
+  extractionID <- samples2$extractionID
+  sample_type <- samples2$sample_type
+  sampleID <- samples2$sampleID
+  temp_treat <- samples2$temp_treat
+  micro_treat <- samples2$micro_treat
+  combo_treat <- samples2$combo_treat
+  sample_or_control <- samples2$sample_or_control
+  sex <- samples2$sex
+  graft_stage <- samples2$graft_stage
+  DNA_conc <- samples2$DNA_conc
+  sampleinfo2 <- data.frame(extractionID = extractionID,
+                            sample_type = sample_type,
+                            sampleID = sampleID,
+                            temp_treat = temp_treat,
+                            micro_treat = micro_treat,
+                            combo_treat = combo_treat,
+                            sample_or_control = sample_or_control,
+                            sex = sex,
+                            graft_stage = graft_stage,
+                            DNA_conc = DNA_conc)
+  rownames(sampleinfo2) <- samples.out2
   
 # Format your data to work with phyloseq
-  ps2 <- phyloseq(otu_table(seqtab.nochim2, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa2))
+  ps2 <- phyloseq(otu_table(seqtab.nochim2, taxa_are_rows = FALSE), sample_data(sampleinfo2), tax_table(taxa2))
   ps2
   
 # Merge phyloseq objects
   ps3 <- merge_phyloseq(ps1, ps2)
   ps3
   
-# Display total number of reads and means per sample in phyloseq obj before processing
+# Display total number of reads, mean, and se in phyloseq obj before processing
   sum(sample_sums(ps3))
   mean(sample_sums(ps3))
+  print(plotrix::std.error(sample_sums(ps3)))
   
 ## Inspect & remove contaminants ----
 # Resource: https://benjjneb.github.io/decontam/vignettes/decontam_intro.html
 
-# Create df with LibrarySize for each sample 
+# Create df with LibrarySize for each sample
   df <- as.data.frame(sample_data(ps3))
   df$LibrarySize <- sample_sums(ps3)
   df <- df[order(df$LibrarySize), ]
@@ -108,22 +113,36 @@
   ggplot(data = df, aes(x = Index, y = LibrarySize, color = sample_or_control)) + 
     geom_point()
   
+# Determine which ASVs are contaminants based on frequency of DNA in negative controls
+  contamdf.freq <- decontam::isContaminant(ps3, conc = DNA_conc, method = "frequency", threshold = 0.1)
+  table(contamdf.freq$contaminant)
+  head(which(contamdf.freq$contaminant))
+  
+# Determine which ASVs are contaminants based on frequency of DNA in negative controls with a higher threshold
+  contamdf.freq05 <- decontam::isContaminant(ps3, conc = DNA_conc, method = "frequency", threshold = 0.5)
+  table(contamdf.freq05$contaminant)
+  head(which(contamdf.freq05$contaminant))
+  
 # Determine which ASVs are contaminants based on prevalence (presence/absence) in negative controls
   sample_data(ps3)$is.neg <- sample_data(ps3)$sample_or_control == "control"
   contamdf.prev <- decontam::isContaminant(ps3, method = "prevalence", neg = "is.neg", threshold = 0.1)
-  
-# How many contaminants are there?
   table(contamdf.prev$contaminant)
-  
-# Which ASVs are contaminants?
   head(which(contamdf.prev$contaminant))
   
-# Determine which ASVs are contaminants based on prevalence (presence/absence) higher than 0.5 in negative controls
+# Determine which ASVs are contaminants based on prevalence (presence/absence) in negative controls with a higher threshold
   contamdf.prev05 <- decontam::isContaminant(ps3, method = "prevalence", neg = "is.neg", threshold = 0.5)
   table(contamdf.prev05$contaminant)
-  
-# Which ASVs are contaminants?
   head(which(contamdf.prev05$contaminant))
+  
+# Determine which ASVs are contaminants based on prevalence (presence/absence) and frequency in negative controls
+  contamdf.comb <- decontam::isContaminant(ps3, conc = DNA_conc, neg = "is.neg", method = "combined", threshold = 0.1)
+  table(contamdf.comb$contaminant)
+  head(which(contamdf.comb$contaminant))
+  
+# Determine which ASVs are contaminants based on prevalence (presence/absence) and frequency in negative controls with a higher threshold  
+  contamdf.comb05 <- decontam::isContaminant(ps3, conc = DNA_conc, neg = "is.neg", method = "combined", threshold = 0.5)
+  table(contamdf.comb05$contaminant)
+  head(which(contamdf.comb05$contaminant))
   
 # Make phyloseq object of presence-absence in negative controls
   ps.neg <- phyloseq::prune_samples(sample_data(ps3)$sample_or_control == "control", ps3)
@@ -164,17 +183,27 @@
   ps4 <- phyloseq::prune_samples(sample_data(ps4)$sex != "F", ps4)
   ps4
   
-# Display total number of reads and means per sample in phyloseq obj after processing
+# Display total number of reads, mean, and se in phyloseq obj after processing
   sum(sample_sums(ps4))
   mean(sample_sums(ps4))
+  print(plotrix::std.error(sample_sums(ps4)))
+  
+# Calculate the reads per sample
+  reads_sample <- microbiome::readcount(ps4)
+  head(reads_sample)
+  
+# Add reads per sample to meta data
+  sample_data(ps4)$reads_sample <- reads_sample
   
 # Save sample metadata
   meta <- sample_data(ps4)
   
-# How many samples for each developmental stage?  
+# How many samples for each developmental stage?
   meta %>%
     group_by(sample_type, combo_treat) %>%
-    summarise(N = n())
+    summarise(N = n(),
+              mean = mean(reads_sample),
+              se = sd(reads_sample)/sqrt(N))
   
 # Save taxonomic and ASV counts
   write.csv(tax_table(ps4), "OsmiaCC_ITStaxa.csv")
@@ -224,15 +253,15 @@
   
 # Examine interactive effects of temperature and microbiome treatments on Shannon diversity
   mod4 <- nlme::lme(Shannon ~ temp_treat * micro_treat, random = ~1|graft_stage, data = fungrich)
-  anova(mod4)
+  stats::anova(mod4)
   
 # Examine interactive effects of temperature and microbiome treatments on Simpson diversity
   mod5 <- nlme::lme(Simpson ~ temp_treat * micro_treat, random = ~1|graft_stage, data = fungrich)
-  anova(mod5)
+  stats::anova(mod5)
   
 # Examine interactive effects of temperature and microbiome treatments on observed richness
   mod6 <- nlme::lme(Simpson ~ temp_treat * micro_treat, random = ~1|graft_stage, data = fungrich)
-  anova(mod6)
+  stats::anova(mod6)
   
 # Reorder x-axis
   fungrich$combo_treat <- factor(fungrich$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -292,6 +321,40 @@
                               ylab("Observed richness")
   OsmiaCC_Observed_fungi
   
+## Evenness ----
+  
+# Extract ASV counts per sample
+  otu <- phyloseq::otu_table(ps4)
+  
+# Calculate Shannon diversity index
+  H <- vegan::diversity(otu, index = "shannon")
+  
+# Calculate observed richness
+  S <- vegan::specnumber(otu)
+  
+# Calculate Pielou's evenness
+  J <- H/log(S)
+  
+# Create df with diversity measures and metadata
+  fung_evenness <- cbind(shannon = H, richness = S, pielou = J, sample_data(ps4))
+  fung_evenness
+  
+# Plot
+  OsmiaCC_Pielou_fung <- ggplot(fung_evenness, aes(x = combo_treat, y = pielou, color = combo_treat)) +
+                            geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                            geom_jitter(size = 1, alpha = 0.9) +
+                            theme_bw() +
+                            ylab("Pielou's Evenness") +
+                            xlab("") +
+                            facet_grid(~ sample_type,
+                                       scale = "free",
+                                       space = "free",
+                                       labeller = as_labeller(type_names)) +
+                            scale_color_manual(name = "Treatment",
+                                              values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                              labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural'))
+  OsmiaCC_Pielou_fung 
+
 ## Beta diversity with relative abundance data ----
   
 # Calculate the relative abundance of each otu  
@@ -341,7 +404,7 @@
   disp_fung
   
 # Do any of the group dispersions differ?
-  disp_fung_an <- anova(disp_fung)
+  disp_fung_an <- stats::anova(disp_fung)
   disp_fung_an
   
 # Calculate the average distance of group members to the group centroid: just temperature treatment
@@ -349,7 +412,7 @@
   disp_fung_temp
   
 # Do any of the group dispersions differ?  
-  disp_fung_temp_an <- anova(disp_fung_temp)
+  disp_fung_temp_an <- stats::anova(disp_fung_temp)
   disp_fung_temp_an
   
 # Calculate the average distance of group members to the group centroid: just microbiome treatment
@@ -357,7 +420,7 @@
   disp_fung_micro
   
 # Do any of the group dispersions differ?  
-  disp_fung_micro_an <- anova(disp_fung_micro)
+  disp_fung_micro_an <- stats::anova(disp_fung_micro)
   disp_fung_micro_an
   
 # Which group dispersions differ?
@@ -368,7 +431,7 @@
   
 # Which group dispersions differ?
   disp_fung_tHSD <- stats::TukeyHSD(disp_fung)
-  disp_fung_tHSD  
+  disp_fung_tHSD
   
 ## Ordination with relative abundance data ----
   
@@ -449,7 +512,7 @@
   disp_fung_rare
   
 # Do any of the group dispersions differ?
-  disp_fung_an_rare <- anova(disp_fung_rare)
+  disp_fung_an_rare <- stats::anova(disp_fung_rare)
   disp_fung_an_rare
   
 # Calculate the average distance of group members to the group centroid: just temperature treatment
@@ -457,7 +520,7 @@
   disp_fung_temp_rare
   
 # Do any of the group dispersions differ?  
-  disp_fung_temp_an_rare <- anova(disp_fung_temp_rare)
+  disp_fung_temp_an_rare <- stats::anova(disp_fung_temp_rare)
   disp_fung_temp_an_rare
   
 # Calculate the average distance of group members to the group centroid: just microbiome treatment
@@ -465,7 +528,7 @@
   disp_fung_micro_rare
   
 # Do any of the group dispersions differ?  
-  disp_fung_micro_an_rare <- anova(disp_fung_micro_rare)
+  disp_fung_micro_an_rare <- stats::anova(disp_fung_micro_rare)
   disp_fung_micro_an_rare
   
 # Which group dispersions differ?

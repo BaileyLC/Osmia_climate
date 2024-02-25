@@ -337,7 +337,9 @@
   
 # Plot larval duration by treatment
   dur <- ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
-            geom_boxplot(outlier.shape = NA) + 
+            geom_boxplot(outlier.shape = NA,
+                         width = 0.5, 
+                         position = position_dodge(width = 0.1)) + 
             geom_jitter(size = 1, 
                         alpha = 0.9) +
             theme_bw() +

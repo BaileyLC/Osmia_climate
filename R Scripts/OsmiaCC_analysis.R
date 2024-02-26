@@ -32,7 +32,7 @@
   library(multcompView) # Version 0.1-9
 
 # Import data
-  all_sensors <- read.csv("all_sensors.csv")
+  all.sensors <- read.csv("all_sensors.csv")
   health <- read.csv("health - Data.csv")
   duration <- read.csv("life_history - Data.csv")
   mortality <- read.csv("mortality - Data.csv")
@@ -43,27 +43,30 @@
   health <- na.omit(health)
 
 # Subset to create dfs by sex
-  males_health <- health[health$sex == "M", ]
-  males_duration <- duration[duration$sex == "M", ]
-  males_mortality <- mortality[mortality$sex == "M", ]
+  males.health <- health[health$sex == "M", ]
+  females.health <- health[health$sex == "F", ]
+  males.duration <- duration[duration$sex == "M", ]
+  females.duration <- duration[duration$sex == "F", ]
+  males.mortality <- mortality[mortality$sex == "M", ]
+  females.mortality <- mortality[mortality$sex == "F", ]
 
 ## Climate treatments ----
   
 # Format date column
-  all_sensors$Date <- as.Date(all_sensors$Date, format = "%Y-%m-%d")
+  all.sensors$Date <- as.Date(all.sensors$Date, format = "%Y-%m-%d")
   
 # Remove dates after July 4, when the experiment stopped
-  all_sensors <- all_sensors %>% filter(Date < '2023-07-04')
+  all.sensors <- all.sensors %>% filter(Date < '2023-07-04')
 
 # Combine date and time columns
-  all_sensors$DateTime <- as.POSIXct(paste(all_sensors$Date, all_sensors$Time),
+  all.sensors$DateTime <- as.POSIXct(paste(all.sensors$Date, all.sensors$Time),
                                      format = "%Y-%m-%d %I:%M:%S %p")  
 
 # Manually order legend
-  all_sensors$Sensor <- factor(all_sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
+  all.sensors$Sensor <- factor(all.sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
 
 # Plot temperature & humidity
-  treats <- ggplot(all_sensors, aes(x = DateTime, color = Sensor, group = Sensor)) +
+  treats <- ggplot(all.sensors, aes(x = DateTime, color = Sensor, group = Sensor)) +
                 geom_line(aes(y = Temp, linetype = "Temperature")) + 
                 geom_line(aes(y = Humidity, linetype = "Humidity")) +
                 theme_bw() +
@@ -80,25 +83,25 @@
   ggsave("OsmiaCC_treatments.png", plot = treats, width = 15, height = 8, unit = "in")
   
 # Set Sensor reference group as ambient  
-  all_sensors <- all_sensors %>% mutate(Sensor = relevel(Sensor, ref = "Ambient"))
-  levels(all_sensors$Sensor)
+  all.sensors <- all.sensors %>% mutate(Sensor = relevel(Sensor, ref = "Ambient"))
+  levels(all.sensors$Sensor)
   
 # LMM of temperature using date as a random intercept to account for repeated measures
-  gau_temp <- lmerTest::lmer(Temp ~ Sensor + (1|Date), data = all_sensors)
-  summary(gau_temp)
+  gau.temp <- lmerTest::lmer(Temp ~ Sensor + (1|Date), data = all.sensors)
+  summary(gau.temp)
   
 # Pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gau_temp, pairwise ~ Sensor, adjust = "tukey")
+  emmeans(gau.temp, pairwise ~ Sensor, adjust = "tukey")
 
 # LMM of humidity using date as a random intercept to account for repeated measures
-  gau_humidity <- lmerTest::lmer(Humidity ~ Sensor + (1|Date), data = all_sensors)
-  summary(gau_humidity)
+  gau.humidity <- lmerTest::lmer(Humidity ~ Sensor + (1|Date), data = all.sensors)
+  summary(gau.humidity)
   
 # Pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gau_humidity, pairwise ~ Sensor, adjust = "tukey")
+  emmeans(gau.humidity, pairwise ~ Sensor, adjust = "tukey")
 
 # Metadata
-  all_sensors %>%
+  all.sensors %>%
     group_by(Sensor) %>%
     summarise(N = n(),
               Temp_mean = mean(Temp),
@@ -112,52 +115,54 @@
   
 ## Larval body mass ----
 
+# Males  
+  
 # Subset df to include just treatments and response variable
-  males_health_mass <- males_health %>%
+  males.health.mass <- males.health %>%
     dplyr::select(bee, temp_treat, micro_treat, combo_treat, graft_stage, wet_mass_mg)
 
 # Determine sample sizes, mean, and sd of males by treatment
-  males_health_mass %>%
+  males.health.mass %>%
     group_by(combo_treat) %>%
     summarise(N = n(),
               Mean = mean(wet_mass_mg), 
               SE = sd(wet_mass_mg)/sqrt(N))
 
 # Change micro_treat and temp_treat to factors
-  males_health_mass$micro_treat <- as.factor(males_health_mass$micro_treat)
-  males_health_mass$temp_treat <- as.factor(males_health_mass$temp_treat)
+  males.health.mass$micro_treat <- as.factor(males.health.mass$micro_treat)
+  males.health.mass$temp_treat <- as.factor(males.health.mass$temp_treat)
   
 # Set micro_treat reference group as sterile
-  males_health_mass <- males_health_mass %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
-  levels(males_health_mass$micro_treat)
+  males.health.mass <- males.health.mass %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males.health.mass$micro_treat)
 
 # Set temp_treat reference group as ambient  
-  males_health_mass <- males_health_mass %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
-  levels(males_health_mass$temp_treat)
+  males.health.mass <- males.health.mass %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males.health.mass$temp_treat)
   
 # LMM of larval biomass using grafting stage as a random intercept
-  gau_mass <- lmerTest::lmer(wet_mass_mg ~ micro_treat * temp_treat + (1|graft_stage), data = males_health_mass)
+  gau.mass.M <- lmerTest::lmer(wet_mass_mg ~ micro_treat * temp_treat + (1|graft_stage), data = males.health.mass)
  
 # Check for normality with Q-Q plots and the Shapiro-Wilk test
-  stats::qqnorm(resid(gau_mass, type = "pearson"))
-  stats::qqline(resid(gau_mass, type = "pearson"))
-  stats::shapiro.test(resid(gau_mass))
+  stats::qqnorm(resid(gau.mass.M, type = "pearson"))
+  stats::qqline(resid(gau.mass.M, type = "pearson"))
+  stats::shapiro.test(resid(gau.mass.M))
   
 # LMM output
-  summary(gau_mass)
+  summary(gau.mass.M)
   
 # ANOVA with Kenward-Roger approximation
   if(requireNamespace("pbkrtest", quietly = TRUE))
-    anova(gau_mass, type = 2, ddf = "Kenward-Roger")
+    anova(gau.mass.M, type = 2, ddf = "Kenward-Roger")
   
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
-  pairs(emmeans(gau_mass, "micro_treat", by = "temp_treat"), adjust = "tukey")
+  pairs(emmeans(gau.mass.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
   
 # Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
-  pairs(emmeans(gau_mass, "temp_treat", by = "micro_treat"), adjust = "tukey")
+  pairs(emmeans(gau.mass.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
   
 # Set color scheme
-  climate_colors <- c("CS" = "#64B5F6",
+  climate.colors <- c("CS" = "#64B5F6",
                       "CN" = "#1565C0",
                       "AS" = "#9E9E9E",
                       "AN" = "#616161",
@@ -165,164 +170,296 @@
                       "WN" = "#C62828")
   
 # Reorder the x-axis
-  males_health_mass$combo_treat <- factor(males_health_mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  males.health.mass$combo_treat <- factor(males.health.mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Italicize title
-  bm_title <- expression(paste("(", italic("a"), ")"))
+  bm.title <- expression(paste("(", italic("a"), ")"))
   
 # Plot larval body mass by treatment
-  bm <- ggplot(males_health_mass, aes(x = combo_treat, y = wet_mass_mg, color = combo_treat)) + 
-          geom_boxplot(outlier.shape = NA,
-                       width = 0.5,
-                       position = position_dodge(width = 0.1)) + 
-          geom_jitter(size = 1, 
-                      alpha = 0.9) +
-          theme_bw() +
-          theme(legend.position = "none",
-                plot.title = element_text(hjust = -0.14)) +
-          theme(panel.grid.major = element_blank(),
-                panel.grid.minor = element_blank()) +
-          theme(text = element_text(size = 16)) +
-          ylim(0, 20) +
-          scale_color_manual(name = "Treatment", 
-                             values = climate_colors) +
-          labs(title = bm_title) +
-          ylab("Larval body mass (mg)") +
-          xlab("Treatment")
-  bm
+  bm.M <- ggplot(males.health.mass, aes(x = combo_treat, y = wet_mass_mg, color = combo_treat)) + 
+            geom_boxplot(outlier.shape = NA,
+                         width = 0.5,
+                         position = position_dodge(width = 0.1)) + 
+            geom_jitter(size = 1, 
+                        alpha = 0.9) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  plot.title = element_text(hjust = -0.14)) +
+            theme(panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank()) +
+            theme(text = element_text(size = 16)) +
+            ylim(0, 20) +
+            scale_color_manual(name = "Treatment", 
+                               values = climate.colors) +
+            labs(title = bm.title) +
+            ylab("Larval body mass (mg)") +
+            xlab("Treatment")
+  bm.M
+  
+# Females
+  
+# Subset df to include just treatments and response variable
+  females.health.mass <- females.health %>%
+    dplyr::select(bee, temp_treat, micro_treat, combo_treat, graft_stage, wet_mass_mg)
+  
+# Determine sample sizes, mean, and sd of males by treatment
+  females.health.mass %>%
+    group_by(combo_treat) %>%
+    summarise(N = n(),
+              Mean = mean(wet_mass_mg), 
+              SE = sd(wet_mass_mg)/sqrt(N))
+  
+# Change micro_treat and temp_treat to factors
+  females.health.mass$micro_treat <- as.factor(females.health.mass$micro_treat)
+  females.health.mass$temp_treat <- as.factor(females.health.mass$temp_treat)
+  
+# Set micro_treat reference group as sterile
+  females.health.mass <- females.health.mass %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(females.health.mass$micro_treat)
+  
+# Set temp_treat reference group as ambient  
+  females.health.mass <- females.health.mass %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(females.health.mass$temp_treat)
+  
+# LMM of larval biomass using grafting stage as a random intercept
+  gau.mass.F <- lmerTest::lmer(wet_mass_mg ~ micro_treat * temp_treat + (1|graft_stage), data = females.health.mass)
+  
+# Check for normality with Q-Q plots and the Shapiro-Wilk test
+  stats::qqnorm(resid(gau.mass.F, type = "pearson"))
+  stats::qqline(resid(gau.mass.F, type = "pearson"))
+  stats::shapiro.test(resid(gau.mass.F))
+  
+# LMM output
+  summary(gau.mass.F)
+  
+# ANOVA with Kenward-Roger approximation
+  if(requireNamespace("pbkrtest", quietly = TRUE))
+    anova(gau.mass.F, type = 2, ddf = "Kenward-Roger")
+  
+# Reorder the x-axis
+  females.health.mass$combo_treat <- factor(females.health.mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot larval body mass by treatment
+  bm.F <- ggplot(females.health.mass, aes(x = combo_treat, y = wet_mass_mg, color = combo_treat)) + 
+              geom_boxplot(outlier.shape = NA,
+                           width = 0.5,
+                           position = position_dodge(width = 0.1)) + 
+              geom_jitter(size = 1, 
+                          alpha = 0.9) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    plot.title = element_text(hjust = -0.14)) +
+              theme(panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank()) +
+              theme(text = element_text(size = 16)) +
+              ylim(0, 20) +
+              scale_color_manual(name = "Treatment", 
+                                 values = climate.colors) +
+              labs(title = bm.title) +
+              ylab("Larval body mass (mg)") +
+              xlab("Treatment")
+  bm.F
   
 ## Proportion of larval body fat ----
 
+# Males  
+  
 # Subset df to include just treatments and response variable
-  males_health_fat <- males_health %>%
+  males.health.fat <- males.health %>%
     dplyr::select(bee, temp_treat, micro_treat, combo_treat, graft_stage, prop_body_fat)
   
 # Determine sample sizes, mean, and sd of males by treatment
-  males_health_fat %>%
+  males.health.fat %>%
     group_by(combo_treat) %>%
     summarise(N = n(),
               Mean = mean(prop_body_fat), 
               SD = sd(prop_body_fat))
   
 # Change micro_treat and temp_treat to factors
-  males_health_fat$micro_treat <- as.factor(males_health_fat$micro_treat)
-  males_health_fat$temp_treat <- as.factor(males_health_fat$temp_treat)
+  males.health.fat$micro_treat <- as.factor(males.health.fat$micro_treat)
+  males.health.fat$temp_treat <- as.factor(males.health.fat$temp_treat)
   
 # Set micro_treat reference group as sterile
-  males_health_fat <- males_health_fat %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
-  levels(males_health_fat$micro_treat)
+  males.health.fat <- males.health.fat %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males.health.fat$micro_treat)
   
 # Set temp_treat reference group as ambient  
-  males_health_fat <- males_health_fat %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
-  levels(males_health_mass$temp_treat)
+  males.health.fat <- males.health.fat %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males.health.mass$temp_treat)
   
 # LMM of larval fat content using grafting stage as a random intercept  
-  gau_fat <- lmerTest::lmer(prop_body_fat ~ micro_treat * temp_treat + (1|graft_stage), data = males_health_fat)
+  gau.fat.M <- lmerTest::lmer(prop_body_fat ~ micro_treat * temp_treat + (1|graft_stage), data = males.health.fat)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
-  stats::qqnorm(resid(gau_fat, type = "pearson"))
-  stats::qqline(resid(gau_fat, type = "pearson"))
-  stats::shapiro.test(resid(gau_fat))
+  stats::qqnorm(resid(gau.fat.M, type = "pearson"))
+  stats::qqline(resid(gau.fat.M, type = "pearson"))
+  stats::shapiro.test(resid(gau.fat.M))
   
 # LMM output
-  summary(gau_fat)
+  summary(gau.fat.M)
   
 # ANOVA with Kenward-Roger approximation
   if(requireNamespace("pbkrtest", quietly = TRUE))
-    anova(gau_fat, type = 2, ddf = "Kenward-Roger")
+    anova(gau.fat.M, type = 2, ddf = "Kenward-Roger")
   
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
-  pairs(emmeans(gau_fat, "micro_treat", by = "temp_treat"), adjust = "tukey")
+  pairs(emmeans(gau.fat.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
   
 # Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
-  pairs(emmeans(gau_fat, "temp_treat", by = "micro_treat"), adjust = "tukey")
+  pairs(emmeans(gau.fat.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
   
 # All pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gau_fat, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
+  emmeans(gau.fat.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
 # Reorder the x-axis
-  males_health_fat$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  males.health.fat$combo_treat <- factor(males.health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Italicize title
-  fat_title <- expression(paste("(", italic("b"), ")"))
+  fat.title <- expression(paste("(", italic("b"), ")"))
   
 # Plot the proportion of larval body fat by treatment
-  fat <- ggplot(males_health_fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
-            geom_boxplot(outlier.shape = NA, 
-                         width = 0.5, 
-                         position = position_dodge(width = 0.1)) + 
-            geom_jitter(size = 1, 
-                        alpha = 0.9) +
-            theme_bw() +
-            theme(legend.position = "none",
-                  plot.title = element_text(hjust = -0.12)) +
-            theme(panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank()) +
-            theme(text = element_text(size = 16)) +
-            ylim(0, 6) +
-            scale_color_manual(name = "Treatment", 
-                              values = climate_colors) +
-            labs(title = fat_title) +
-            ylab("Proportion of body fat") + 
-            xlab("Treatment")
-  fat
+  fat.M <- ggplot(males.health.fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
+              geom_boxplot(outlier.shape = NA, 
+                           width = 0.5, 
+                           position = position_dodge(width = 0.1)) + 
+              geom_jitter(size = 1, 
+                          alpha = 0.9) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    plot.title = element_text(hjust = -0.12)) +
+              theme(panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank()) +
+              theme(text = element_text(size = 16)) +
+              ylim(0, 6) +
+              scale_color_manual(name = "Treatment", 
+                                 values = climate.colors) +
+              labs(title = fat.title) +
+              ylab("Proportion of body fat") + 
+              xlab("Treatment")
+  fat.M
+  
+# Females  
+  
+# Subset df to include just treatments and response variable
+  females.health.fat <- females.health %>%
+    dplyr::select(bee, temp_treat, micro_treat, combo_treat, graft_stage, prop_body_fat)
+  
+# Determine sample sizes, mean, and sd of females by treatment
+  females.health.fat %>%
+    group_by(combo_treat) %>%
+    summarise(N = n(),
+              Mean = mean(prop_body_fat), 
+              SD = sd(prop_body_fat))
+  
+# Change micro_treat and temp_treat to factors
+  females.health.fat$micro_treat <- as.factor(females.health.fat$micro_treat)
+  females.health.fat$temp_treat <- as.factor(females.health.fat$temp_treat)
+  
+# Set micro_treat reference group as sterile
+  females.health.fat <- females.health.fat %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males.health.fat$micro_treat)
+  
+# Set temp_treat reference group as ambient  
+  females.health.fat <- females.health.fat %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(females.health.mass$temp_treat)
+  
+# LMM of larval fat content using grafting stage as a random intercept  
+  gau.fat.F <- lmerTest::lmer(prop_body_fat ~ micro_treat * temp_treat + (1|graft_stage), data = females.health.fat)
+  
+# Check for normality with Q-Q plots and the Shapiro-Wilks test
+  stats::qqnorm(resid(gau.fat.F, type = "pearson"))
+  stats::qqline(resid(gau.fat.F, type = "pearson"))
+  stats::shapiro.test(resid(gau.fat.F))
+  
+# LMM output
+  summary(gau.fat.F)
+  
+# ANOVA with Kenward-Roger approximation
+  if(requireNamespace("pbkrtest", quietly = TRUE))
+    anova(gau.fat.F, type = 2, ddf = "Kenward-Roger")
+  
+# Reorder the x-axis
+  females.health.fat$combo_treat <- factor(females.health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot the proportion of larval body fat by treatment
+  fat.F <- ggplot(females.health.fat, aes(x = combo_treat, y = prop_body_fat, color = combo_treat)) + 
+              geom_boxplot(outlier.shape = NA, 
+                           width = 0.5, 
+                           position = position_dodge(width = 0.1)) + 
+              geom_jitter(size = 1, 
+                          alpha = 0.9) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    plot.title = element_text(hjust = -0.12)) +
+              theme(panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank()) +
+              theme(text = element_text(size = 16)) +
+              ylim(0, 6) +
+              scale_color_manual(name = "Treatment", 
+                                 values = climate.colors) +
+              labs(title = fat.title) +
+              ylab("Proportion of body fat") + 
+              xlab("Treatment")
+  fat.F
   
 ## Duration of developmental stages ----
 
+# Males  
+  
 # Remove rows without complete data
-  males_duration <- males_duration[!is.na(males_duration$days_instar2.5), ] 
+  males.duration <- males.duration[!is.na(males.duration$days_instar2.5), ] 
   
 # Determine sample sizes, mean, and sd of males by treatment
-  males_duration %>%
+  males.duration %>%
     group_by(combo_treat) %>%
     summarise(N = n(),
               Mean = mean(days_instar2.5), 
               SD = sd(days_instar2.5))
   
 # Change micro_treat and temp_treat to factors
-  males_duration$micro_treat <- as.factor(males_duration$micro_treat)
-  males_duration$temp_treat <- as.factor(males_duration$temp_treat)
+  males.duration$micro_treat <- as.factor(males.duration$micro_treat)
+  males.duration$temp_treat <- as.factor(males.duration$temp_treat)
   
 # Set micro_treat reference group as sterile
-  males_duration <- males_duration %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
-  levels(males_duration$micro_treat)
+  males.duration <- males.duration %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males.duration$micro_treat)
   
 # Set temp_treat reference group as ambient  
-  males_duration <- males_duration %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
-  levels(males_duration$temp_treat)
+  males.duration <- males.duration %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males.duration$temp_treat)
   
 # LMM of larval development using grafting stage as a random intercept 
-  gau_dur <- lmerTest::lmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), data = males_duration)
+  gau.dur.M <- lmerTest::lmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), data = males.duration)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
-  stats::qqnorm(resid(gau_dur, type = "pearson"))
-  stats::qqline(resid(gau_dur, type = "pearson"))
-  stats::shapiro.test(resid(gau_dur))
+  stats::qqnorm(resid(gau.dur.M, type = "pearson"))
+  stats::qqline(resid(gau.dur.M, type = "pearson"))
+  stats::shapiro.test(resid(gau.dur.M))
   
 # GLMM of larval development using grafting stage as a random intercept and gamma distribution
-  gam_dur <- lme4::glmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), family = Gamma, data = males_duration)
+  gam.dur.M <- lme4::glmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), family = Gamma, data = males.duration)
 
 # Check for heteroscedasticity
-  plot(gam_dur)
+  plot(gam.dur.M)
   
 # GLMM output
-  summary(gam_dur)
+  summary(gam.dur.M)
   
 # ANOVA with Kenward-Roger approximation
   if(requireNamespace("pbkrtest", quietly = TRUE))
-    anova(gau_dur, type = 2, ddf = "Kenward-Roger")
+    anova(gau.dur.M, type = 2, ddf = "Kenward-Roger")
   
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
-  pairs(emmeans(gam_dur, "micro_treat", by = "temp_treat"), adjust = "tukey")
+  pairs(emmeans(gam.dur.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
   
 #Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
-  pairs(emmeans(gam_dur, "temp_treat", by = "micro_treat"), adjust = "tukey")
+  pairs(emmeans(gam.dur.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
   
 # All pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gam_dur, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
+  emmeans(gam.dur.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
 # Set labels
-  climate_labs <- c("CS" = "Cool: Sterile",
+  climate.labs <- c("CS" = "Cool: Sterile",
                     "CN" = "Cool: Natural",
                     "AS" = "Ambient: Sterile",
                     "AN" = "Ambient: Natural",
@@ -330,69 +467,282 @@
                     "WN" = "Warm: Natural")  
   
 # Reorder the x-axis
-  males_health$combo_treat <- factor(males_health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
+  males.health$combo_treat <- factor(males.health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
   
 # Italicize title
-  dur_title <- expression(paste("(", italic("c"), ")"))
+  dur.title <- expression(paste("(", italic("c"), ")"))
   
 # Plot larval duration by treatment
-  dur <- ggplot(males_duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
-            geom_boxplot(outlier.shape = NA,
-                         width = 0.5, 
-                         position = position_dodge(width = 0.1)) + 
-            geom_jitter(size = 1, 
-                        alpha = 0.9) +
-            theme_bw() +
-            theme(panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank()) +
-            theme(text = element_text(size = 16),
-                  plot.title = element_text(hjust = -0.14)) +
-            ylim(5, 20) +
-            scale_color_manual(name = "Treatment", 
-                               values = climate_colors,
-                               labels = climate_labs) +             
-            labs(title = dur_title) +
-            ylab("Duration Larval instars II-V (days)") + 
-            xlab("Treatment")
-  dur
+  dur.M <- ggplot(males.duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
+              geom_boxplot(outlier.shape = NA,
+                           width = 0.5, 
+                           position = position_dodge(width = 0.1)) + 
+              geom_jitter(size = 1, 
+                          alpha = 0.9) +
+              theme_bw() +
+              theme(panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank()) +
+              theme(text = element_text(size = 16),
+                    plot.title = element_text(hjust = -0.14)) +
+              ylim(5, 20) +
+              scale_color_manual(name = "Treatment", 
+                                 values = climate.colors,
+                                 labels = climate.labs) +             
+              labs(title = dur.title) +
+              ylab("Duration Larval instars II-V (days)") + 
+              xlab("Treatment")
+  dur.M
+  
+# Females
+  
+# Remove rows without complete data
+  females.duration <- females.duration[!is.na(females.duration$days_instar2.5), ] 
+  
+# Determine sample sizes, mean, and sd of males by treatment
+  females.duration %>%
+    group_by(combo_treat) %>%
+    summarise(N = n(),
+              Mean = mean(days_instar2.5), 
+              SD = sd(days_instar2.5))
+  
+# Change micro_treat and temp_treat to factors
+  females.duration$micro_treat <- as.factor(females.duration$micro_treat)
+  females.duration$temp_treat <- as.factor(females.duration$temp_treat)
+  
+# Set micro_treat reference group as sterile
+  females.duration <- females.duration %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(females.duration$micro_treat)
+  
+# Set temp_treat reference group as ambient  
+  females.duration <- females.duration %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(females.duration$temp_treat)
+  
+# LMM of larval development using grafting stage as a random intercept 
+  gau.dur.F <- lmerTest::lmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), data = females.duration)
+  
+# Check for normality with Q-Q plots and the Shapiro-Wilks test
+  stats::qqnorm(resid(gau.dur.F, type = "pearson"))
+  stats::qqline(resid(gau.dur.F, type = "pearson"))
+  stats::shapiro.test(resid(gau.dur.F))
+  
+# ANOVA with Kenward-Roger approximation
+  if(requireNamespace("pbkrtest", quietly = TRUE))
+    anova(gau.dur.F, type = 2, ddf = "Kenward-Roger")
+  
+# Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
+  pairs(emmeans(gau.dur.F, "micro_treat", by = "temp_treat"), adjust = "tukey")
+  
+#Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
+  pairs(emmeans(gau.dur.F, "temp_treat", by = "micro_treat"), adjust = "tukey")
+  
+# All pairwise comparisons with Tukey's HSD adjustment
+  emmeans(gau.dur.F, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
+  
+# Reorder the x-axis
+  females.health$combo_treat <- factor(females.health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
+  
+# Plot larval duration by treatment
+  dur.F <- ggplot(females.duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
+              geom_boxplot(outlier.shape = NA,
+                           width = 0.5, 
+                           position = position_dodge(width = 0.1)) + 
+              geom_jitter(size = 1, 
+                          alpha = 0.9) +
+              theme_bw() +
+              theme(panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank()) +
+              theme(text = element_text(size = 16),
+                    plot.title = element_text(hjust = -0.14)) +
+              ylim(5, 20) +
+              scale_color_manual(name = "Treatment", 
+                                 values = climate.colors,
+                                 labels = climate.labs) +             
+              labs(title = dur.title) +
+              ylab("Duration Larval instars II-V (days)") + 
+              xlab("Treatment")
+  dur.F
   
 ## Mortality ----
 
-# How many bees form each treatment died within 48 h of grafting?
-  males_mortality_graft <- males_mortality %>%
+# Males  
+  
+# How many bees from each treatment died within 48 h of grafting?
+  males.mortality.graft <- males.mortality %>%
     filter(date > '6/8/2023') %>%
     group_by(combo_treat) %>%
     tally()
-  males_mortality_graft
+  males.mortality.graft
    
 # Remove bees that died within 48 hr of grafting
-  males_mortality48 <- males_mortality %>%
+  males.mortality48 <- males.mortality %>%
     filter(date < '6/8/2023')
   
 # Determine sample sizes of males by treatment
-  males_mortality_ss <- males_mortality48 %>%
+  males.mortality.ss <- males.mortality48 %>%
     group_by(combo_treat) %>%
     tally()
-  males_mortality_ss
+  males.mortality.ss
   
-# Add sample sizes per treatment
-  males_mortality_ss$N <- c(29, 29, 29, 29, 30, 30)
-  males_mortality_ss
+# Add sample sizes per treatment (each originally had 30)
+  males.mortality.ss$N <- c(29, 29, 29, 29, 30, 30)
+  males.mortality.ss
 
 # Add column and calculate percent mortality   
-  males_mortality_ss$per_mort <- males_mortality_ss$n/males_mortality_ss$N
-  males_mortality_ss
+  males.mortality.ss$per_mort <- males.mortality.ss$n/males.mortality.ss$N
+  males.mortality.ss
 
+# Females
+  
+# How many bees from each treatment died within 48 h of grafting?
+  females.mortality.graft <- females.mortality %>%
+    filter(date > '6/9/2023') %>%
+    group_by(combo_treat) %>%
+    tally()
+  females.mortality.graft
+  
+# Remove bees that died within 48 hr of grafting
+  females.mortality48 <- females.mortality %>%
+    filter(date < '6/9/2023')
+  
+# Determine sample sizes of females by treatment
+  females.mortality.ss <- females.mortality48 %>%
+    group_by(combo_treat) %>%
+    tally()
+  females.mortality.ss
+  
+# Add sample sizes per treatment (original ss: AN = 20, AS = 13, WN = 20, WS = 13)
+  females.mortality.ss$N <- c(20, 13, 20, 13)
+  females.mortality.ss
+  
+# Add column and calculate percent mortality   
+  females.mortality.ss$per_mort <- females.mortality.ss$n/females.mortality.ss$N
+  females.mortality.ss
+  
 ## Survivorship analyses ----
 # Resource: https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html
+# Resource: https://www.drizopoulos.com/courses/emc/basic_surivival_analysis_in_r#accelerated-failure-time-models
 # NOTE: Status: 0 = survival to the fifth instar; 1 = death
 
+# Both males and females  
+  
 # Recreate original df because NAs were removed above during analysis of larval development
   duration <- read.csv("life_history - Data.csv")
-  males_duration <- duration[duration$sex == "M", ]
+  
+# Convert chr to date
+  duration <- duration %>%
+    mutate(
+      date_nesting_start = ymd(date_nesting_start),
+      date_nesting_end = ymd(date_nesting_end),
+      date_graft = ymd(date_graft),
+      date_instar1 = ymd(date_instar1),
+      date_instar2 = ymd(date_instar2),
+      date_instar5 = ymd(date_instar5),
+      date_last_alive = ymd(date_last_alive)
+    )
+  
+# Check to see if it worked  
+  tibble(duration)
+  
+# Calculate the number of days bees survived
+  duration <- duration %>%
+    mutate(
+      total_surv_days = as.duration(date_graft %--% date_last_alive / ddays(1))
+    )
 
-# Convert character to date
-  males_duration <- males_duration %>%
+# Format chr to numeric
+  duration$total_surv_days <- as.numeric(duration$total_surv_days)
+  
+# Check to see if it worked   
+  head(duration)
+  
+# Create a survival object
+  survival::Surv(duration$total_surv_days, duration$status)
+  
+# Fit the survival curve
+  s1 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat + sex, data = duration)
+  summary(s1)
+  
+# Display mean survival time by combo_treat
+  duration %>%
+    filter(status == 1) %>%
+    group_by(combo_treat) %>%
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
+  
+# Display mean survival time by temp_treat
+  duration %>%
+    filter(status == 1) %>%
+    group_by(temp_treat) %>%
+    summarize(N = n(),
+              mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
+  
+# Display mean survival time by micro_treat
+  duration %>%
+    filter(status == 1) %>%
+    group_by(micro_treat) %>%
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
+  
+# Display mean survival time by micro_treat
+  duration %>%
+    filter(status == 1) %>%
+    group_by(sex) %>%
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
+  
+# Log-rank test (when rho = 0) to compare survival times between groups to expected survival time
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat + sex, data = duration, rho = 0)
+  
+# Gehan-Wilcoxon test (when rho = 1) to compare survival times between groups
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat + sex, data = duration, rho = 1)
+  
+# Cox regression model to compare survival times between groups
+  cox.mod1 <- coxme::coxme(Surv(total_surv_days, status) ~ sex + temp_treat * micro_treat + (1|graft_stage), data = duration)
+  summary(cox.mod1)
+  
+# Test the proportional hazards assumption
+  cz1 <- survival::cox.zph(cox.mod1)
+  print(cz1)
+  plot (cz1)
+
+# Remove zeros in total_surv_days
+  duration <- duration[duration$total_surv_days != 0, ]
+  
+# Accelerated failure time model
+  aftm.all <- survival::survreg(Surv(total_surv_days, status) ~ sex + temp_treat * micro_treat + graft_stage, data = duration, dist = "weibull")
+  summary(aftm.all)
+  
+# Use Kaplan-Meier estimator of the residuals to determine the fit of distribution
+  
+# Construct the residuals
+  fitted.all <- aftm.all$linear.predictors
+  res.all <- (log(aftm.all$y[, 1]) - fitted.all) / aftm.all$scale
+  
+# Fit regression model without covariates
+  resKM.all <- survfit(Surv(res.all, status) ~ 1, data = duration)
+  
+# Plot residuals  
+  plot(resKM.all, mark.time = FALSE, xlab = "AFTM Residuals", ylab = "Survival Probability")
+  
+# Superimpose the Weibull distribution
+  xx <- seq(min(res.all), max(res.all), length.out = 35)
+  yy <- exp(- exp(xx))
+  lines(xx, yy, col = "red", lwd = 2)
+  legend("bottomleft", c("KM estimate", "95% CI KM estimate", 
+                         "Survival function of Extreme Value distribution"), 
+         lty = c(1,2,1), col = c(1,1,2), bty = "n")
+  
+# Males only
+  
+# Recreate original df because NAs were removed above during analysis of larval development
+  males.duration <- duration[duration$sex == "M", ]
+
+# Convert chr to date
+  males.duration <- males.duration %>%
     mutate(
       date_nesting_start = ymd(date_nesting_start),
       date_nesting_end = ymd(date_nesting_end),
@@ -404,64 +754,89 @@
     )
 
 # Check to see if it worked  
-  tibble(males_duration)
+  tibble(males.duration)
 
 # Calculate the number of days bees survived
-  males_duration <- males_duration %>%
+  males.duration <- males.duration %>%
     mutate(
       total_surv_days = as.duration(date_graft %--% date_last_alive / ddays(1))
     )
 
 # Format chr to numeric
-  males_duration$total_surv_days <- as.numeric(males_duration$total_surv_days)
+  males.duration$total_surv_days <- as.numeric(males.duration$total_surv_days)
 
 # Check to see if it worked   
-  head(males_duration)
+  head(males.duration)
 
 # NOTE: The analyses below includes bees that died within the first 48 h after grafting  
   
 # Create a survival object
-  survival::Surv(males_duration$total_surv_days, males_duration$status)
+  survival::Surv(males.duration$total_surv_days, males.duration$status)
 
 # Fit the survival curve
-  s2 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+  s2 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration)
   summary(s2)
   
 # Display mean survival time by combo_treat
-  males_duration %>%
+  males.duration %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
     summarize(mean_surv = mean(total_surv_days),
               st_dev_surv = sd(total_surv_days))
   
 # Display mean survival time by temp_treat
-  males_duration %>%
+  males.duration %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
     summarize(mean_surv = mean(total_surv_days),
               st_dev_surv = sd(total_surv_days))
 
 # Display mean survival time by micro_treat
-  males_duration %>%
+  males.duration %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
     summarize(mean_surv = mean(total_surv_days),
               st_dev_surv = sd(total_surv_days))
   
-# Log-rank test to compare survival times between groups to expected survival time (assumes risk of death to be same across time)
-  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration)
+# Log-rank test (when rho = 0) to compare survival times between groups to expected survival time
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration, rho = 0)
   
-# Cox regression model to compare survival times between groups (allows risk of death to vary across time)
-  cox_model1 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males_duration)
-  summary(cox_model1)
+# Gehan-Wilcoxon test (when rho = 1) to compare survival times between groups
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration, rho = 1)
+  
+# Cox regression model to compare survival times between groups
+  cox.mod2 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males.duration)
+  summary(cox.mod2)
   
 # Test the proportional hazards assumption
-  cz1 <- survival::cox.zph(cox_model1)
-  print(cz1)
-  plot (cz1)
+  cz2 <- survival::cox.zph(cox.mod2)
+  print(cz2)
+  plot (cz2)
   
-# Kaplan-Meier with all bees
-  OsmiaCC_KP_all <- ggsurvfit(s2) +
+# Accelerated failure time model
+  aftm.M <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat * micro_treat + graft_stage, data = males.duration, dist = "weibull")
+  summary(aftm.M)
+  
+# Construct the residuals
+  fitted.M <- aftm.M$linear.predictors
+  res.M <- (log(aftm.M$y[, 1]) - fitted.M) / aftm.M$scale
+  
+# Fit regression model without covariates
+  resKM.M <- survfit(Surv(res.M, status) ~ 1, data = males.duration)
+  
+# Plot residuals  
+  plot(resKM.M, mark.time = FALSE, xlab = "AFTM Residuals", ylab = "Survival Probability")
+  
+# Superimpose the Weibull distribution
+  xx <- seq(min(res.M), max(res.M), length.out = 35)
+  yy <- exp(- exp(xx))
+  lines(xx, yy, col = "red", lwd = 2)
+  legend("bottomleft", c("KM estimate", "95% CI KM estimate", 
+                         "Survival function of Extreme Value distribution"), 
+         lty = c(1,2,1), col = c(1,1,2), bty = "n")
+
+# Kaplan-Meier with all male bees
+  OsmiaCC.KP.all <- ggsurvfit(s2) +
                         theme_classic() +
                         theme(legend.position = "right") +
                         theme(text = element_text(size = 16)) +
@@ -472,90 +847,112 @@
                         scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
                         labs(x = "Days",
                              y = "Survival probability")
-  OsmiaCC_KP_all
+  OsmiaCC.KP.all
   
 # NOTE: The analyses below does NOT include bees that died within the first 48 h after grafting
 
 # Remove bees that died within 48 h of grafting
-  males_duration48 <- males_duration %>% 
+  males.duration48 <- males.duration %>% 
     filter(date_last_alive > '2023-06-08')
   
 # Change micro_treat and temp_treat to factors
-  males_duration48$micro_treat <- as.factor(males_duration48$micro_treat)
-  males_duration48$temp_treat <- as.factor(males_duration48$temp_treat)
+  males.duration48$micro_treat <- as.factor(males.duration48$micro_treat)
+  males.duration48$temp_treat <- as.factor(males.duration48$temp_treat)
   
 # Set micro_treat reference group as sterile
-  males_duration48 <- males_duration48 %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
-  levels(males_duration48$micro_treat)
+  males.duration48 <- males.duration48 %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males.duration48$micro_treat)
   
 # Set temp_treat reference group as ambient  
-  males_duration48 <- males_duration48 %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
-  levels(males_duration48$temp_treat)
+  males.duration48 <- males.duration48 %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males.duration48$temp_treat)
   
 # Create a survival object
-  survival::Surv(males_duration48$total_surv_days, males_duration48$status)
+  survival::Surv(males.duration48$total_surv_days, males.duration48$status)
   
 # Fit the survival curve
-  s3 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48)
+  s3 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration48)
   summary(s3)
   
 # Display mean survival time by combo_treat
-  males_duration48 %>%
+  males.duration48 %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
     summarize(mean_surv = mean(total_surv_days),
               st_dev_surv = sd(total_surv_days))
   
 # Display mean survival time by temp_treat
-  males_duration48 %>%
+  males.duration48 %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
     summarize(mean_surv = mean(total_surv_days),
               st_dev_surv = sd(total_surv_days))
   
 # Display mean survival time by micro_treat
-  males_duration48 %>%
+  males.duration48 %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
     summarize(mean_surv = mean(total_surv_days),
               st_dev_surv = sd(total_surv_days))
   
 # Log-rank test (when rho = 0) to compare survival times between groups
-  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48, rho = 0)
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration48, rho = 0)
 
 # Gehan-Wilcoxon test (when rho = 1) to compare survival times between groups
-  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males_duration48, rho = 1)
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration48, rho = 1)
   
 # Cox regression model to compare survival times between groups
-  cox_model2 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males_duration48)
-  summary(cox_model2)
+  cox.mod3 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males.duration48)
+  summary(cox.mod3)
 
 # Test the proportional hazards assumption
-  cz2 <- survival::cox.zph(cox_model2)
-  print(cz2)
-  plot (cz2)
+  cz3 <- survival::cox.zph(cox.mod3)
+  print(cz3)
+  plot (cz3)
+  
+# Accelerated failure time model
+  aftm.M.48 <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat * micro_treat + graft_stage, data = males.duration48, dist = "weibull")
+  summary(aftm.M.48)
+  
+# Construct the residuals
+  fitted.M.48 <- aftm.M.48$linear.predictors
+  res.M.48 <- (log(aftm.M.48$y[, 1]) - fitted.M.48) / aftm.M.48$scale
+  
+# Fit regression model without covariates
+  resKM.M.48 <- survfit(Surv(res.M.48, status) ~ 1, data = males.duration)
+  
+# Plot residuals  
+  plot(resKM.M.48, mark.time = FALSE, xlab = "AFTM Residuals", ylab = "Survival Probability")
+  
+# Superimpose the Weibull distribution
+  xx <- seq(min(res.M.48), max(res.M.48), length.out = 35)
+  yy <- exp(- exp(xx))
+  lines(xx, yy, col = "red", lwd = 2)
+  legend("bottomleft", c("KM estimate", "95% CI KM estimate", 
+                         "Survival function of Extreme Value distribution"), 
+         lty = c(1,2,1), col = c(1,1,2), bty = "n")
 
 # Kaplan-Meier without bees that died within 48 h of grafting
-  OsmiaCC_KP_48 <- ggsurvfit(s3) +
-                      theme_classic() +
-                      theme(legend.position = "right") +
-                      theme(text = element_text(size = 16)) +
-                      scale_color_manual(name = "Treatment", 
-                                         values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
-                                         labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
-                      scale_y_continuous(limits = c(0, 1)) +
-                      scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
-                      labs(x = "Days",
-                           y = "Survival probability")
-  OsmiaCC_KP_48
+  OsmiaCC.KP.M.48 <- ggsurvfit(s3) +
+                        theme_classic() +
+                        theme(legend.position = "right") +
+                        theme(text = element_text(size = 16)) +
+                        scale_color_manual(name = "Treatment", 
+                                           values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                           labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                        scale_y_continuous(limits = c(0, 1)) +
+                        scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+                        labs(x = "Days",
+                             y = "Survival probability")
+  OsmiaCC.KP.M.48
   
-  ggsave("OsmiaCC_KP_48.png", plot = OsmiaCC_KP_48, width = 6, height = 4, unit = "in")
+  ggsave("OsmiaCC_KP_48.png", plot = OsmiaCC.KP.M.48, width = 6, height = 4, unit = "in")
 
 ## Plotting ----  
   
 # Arrange health and life history plots
-  OsmiaCC_fitness <- bm + fat + dur + plot_layout(ncol = 3)
-  OsmiaCC_fitness
+  OsmiaCC.fitness <- bm + fat + dur + plot_layout(ncol = 3)
+  OsmiaCC.fitness
   
-  ggsave("OsmiaCC_fitness.png", plot = OsmiaCC_fitness, width = 18, height = 6, unit = "in")
+  ggsave("OsmiaCC_fitness.png", plot = OsmiaCC.fitness, width = 18, height = 6, unit = "in")
   

@@ -348,12 +348,6 @@
   mod14 <- stats::aov(Shannon ~ temp_treat, data = fung.rich.NoBee)
   stats::anova(mod14)
   
-# Check normality assumption
-  shapiro.test(mod14$residuals)
-  
-# Check equal variance assumption
-  car::leveneTest(Shannon ~ temp_treat, data = fung.rich.NoBee)
-  
 # Post-hoc test
   TukeyHSD(mod14)
   
@@ -432,7 +426,7 @@
     theme_bw() +
     xlab("")
   
-# Examine the effects of temperature and sex on Shannon diversity
+# Examine the effects of sex, temperature, and microbiome treatment on Shannon diversity, with graft stage as a random effect
   mod17 <- nlme::lme(Shannon ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
   stats::anova(mod17)
   
@@ -440,7 +434,7 @@
   emmeans(mod17, pairwise ~ sex, adjust = "tukey")
   emmeans(mod17, pairwise ~ micro_treat, adjust = "tukey")
   
-# Examine the effects of temperature and sex on Simpson diversity
+# Examine the effects of sex, temperature, and microbiome treatment on Simpson diversity, with graft stage as a random effect
   mod18 <- nlme::lme(Simpson ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
   stats::anova(mod18)
   
@@ -448,7 +442,7 @@
   emmeans(mod18, pairwise ~ sex, adjust = "tukey")
   emmeans(mod18, pairwise ~ micro_treat, adjust = "tukey")
   
-# Examine the effects of temperature and sex on observed richness
+# Examine the effects of sex, temperature, and microbiome treatment on observed richness, with graft stage as a random effect
   mod19 <- nlme::lme(Observed ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
   stats::anova(mod19)
   
@@ -517,21 +511,21 @@
 # Subset data to include just males
   fung.rich.bee.M <- fung.rich.bee[fung.rich.bee$sex == "M", ]
   
-# Examine the effect of temperature on Shannon diversity
+# Examine the effect of temperature and microbiome treatment on Shannon diversity, with graft stage as a random effect
   mod20 <- nlme::lme(Shannon ~ temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee.M)
   stats::anova(mod20)
   
 # Post-hoc test  
   emmeans(mod20, pairwise ~ micro_treat, adjust = "tukey")
   
-# Examine the effect of temperature on Simpson diversity
+# Examine the effect of temperature and microbiome treatment on Simpson diversity, with graft stage as a random effect
   mod21 <- nlme::lme(Simpson ~ temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee.M)
   stats::anova(mod21)
   
 # Post-hoc test  
   emmeans(mod21, pairwise ~ micro_treat, adjust = "tukey")
   
-# Examine the effect of temperature on Observed richness
+# Examine the effect of temperature and microbiome treatment on Observed richness, with graft stage as a random effect
   mod22 <- nlme::lme(Observed ~ temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee.M)
   stats::anova(mod22)
   
@@ -594,15 +588,15 @@
 # Subset data to include just males
   fung.rich.bee.F <- fung.rich.bee[fung.rich.bee$sex == "F", ]
   
-# Examine the effect of temperature on Shannon diversity
+# Examine the effect of temperature on Shannon diversity, with graft stage as a random effect
   mod23 <- nlme::lme(Shannon ~ temp_treat, random = ~1|graft_stage, data = fung.rich.bee.F)
   stats::anova(mod23)
   
-# Examine the effect of temperature on Simpson diversity
+# Examine the effect of temperature on Simpson diversity, with graft stage as a random effect
   mod24 <- nlme::lme(Simpson ~ temp_treat, random = ~1|graft_stage, data = fung.rich.bee.F)
   stats::anova(mod24)
   
-# Examine the effect of temperature on Observed richness
+# Examine the effect of temperature on Observed richness, with graft stage as a random effect
   mod25 <- nlme::lme(Observed ~ temp_treat, random = ~1|graft_stage, data = fung.rich.bee.F)
   stats::anova(mod25)
   
@@ -680,8 +674,8 @@
 # Remove samples with NaNs
   fung.evenness <- fung.evenness[complete.cases(fung.evenness), ]
   
-# Examine the effects of temperature treatment and sex on evenness using graft stage as a random effect
-  mod26 <- nlme::lme(pielou ~ temp_treat + micro_treat + sex, random = ~1|graft_stage, data = fung.evenness)
+# Examine the effects of sex, temperature, and microbiome treatment on evenness, with graft stage as a random effect
+  mod26 <- nlme::lme(pielou ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.evenness)
   stats::anova(mod26)
   
 # Plot
@@ -715,7 +709,7 @@
 # Convert to df
   sample.fung <- data.frame(sample_data(ps8))
   
-# Perform the PERMANOVA to test effects of developmental stage on bacterial community composition
+# Perform the PERMANOVA to test effects of temperature, microbiome, and sample type on fungal community composition
   fung.perm <- vegan::adonis2(fung.bray ~ temp_treat + micro_treat + sample_type, data = sample.fung)
   fung.perm
   
@@ -742,7 +736,7 @@
 # Convert to df
   sample.fung.NoBee <- data.frame(sample_data(ps6))
   
-# Perform the PERMANOVA to test effects of treatments on bacterial community composition
+# Perform the PERMANOVA to test effects of temperature on fungal community composition
   fung.perm.NoBee <- vegan::adonis2(fung.bray.NoBee ~ temp_treat, data = sample.fung.NoBee)
   fung.perm.NoBee
   
@@ -757,7 +751,7 @@
 # Convert to df
   sample.fung.bee <- data.frame(sample_data(ps7))
   
-# Perform the PERMANOVA to test effects of treatments on bacterial community composition
+# Perform the PERMANOVA to test effects of temperature, microbiome, and sex on fungal community composition
   fung.perm.bee <- vegan::adonis2(fung.bray.bee ~ temp_treat + micro_treat + sex, data = sample.fung.bee)
   fung.perm.bee
   
@@ -772,7 +766,7 @@
                                 observed = FALSE,
                                 complete = FALSE)
   
-# Perform the PERMANOVA to test effects of treatments on bacterial community composition, dealing with graft stage
+# Perform the PERMANOVA to test effects of temperature, microbiome, and sex on fungal community composition, dealing with graft stage
   fung.perm.bee.graft <- vegan::adonis2(fung.bray.bee ~ temp_treat + micro_treat + sex, permutations = perm.relabund, data = sample.fung.bee)
   fung.perm.bee.graft
   
@@ -828,7 +822,7 @@
   disp.fung.tHSD.combo <- stats::TukeyHSD(disp.fung.bee.combo)
   disp.fung.tHSD.combo
   
-# Calculate the average distance of group members to the group centroid: just temperature treatment
+# Calculate the average distance of group members to the group centroid
   disp.fung.bee.temp <- vegan::betadisper(fung.bray.bee, sample.fung.bee$temp_treat)
   disp.fung.bee.temp
   
@@ -836,7 +830,7 @@
   disp.fung.an.bee.temp <- stats::anova(disp.fung.bee.temp)
   disp.fung.an.bee.temp
   
-# Calculate the average distance of group members to the group centroid: just microbiome treatment
+# Calculate the average distance of group members to the group centroid
   disp.fung.bee.micro <- vegan::betadisper(fung.bray.bee, sample.fung.bee$micro_treat)
   disp.fung.bee.micro
   
@@ -848,7 +842,7 @@
   disp.fung.tHSD.bee.micro <- stats::TukeyHSD(disp.fung.bee.micro)
   disp.fung.tHSD.bee.micro
   
-# Calculate the average distance of group members to the group centroid: just microbiome treatment
+# Calculate the average distance of group members to the group centroid
   disp.fung.bee.sex <- vegan::betadisper(fung.bray.bee, sample.fung.bee$sex)
   disp.fung.bee.sex
   
@@ -1007,32 +1001,32 @@
   
 # Provisions with bees
   
-# Perform PERMANOVA to test effects of treatments on bacterial community composition
+# Create a distance matrix using Bray Curtis dissimilarity
   fung.bray.rare.bee <- phyloseq::distance(rareps.fung.bee, method = "bray")
 
 # Convert to df
   sample.fung.rare.bee <- data.frame(sample_data(rareps.fung.bee))
   
-# Perform the PERMANOVA to test effects of treatment on bacterial community composition 
+# Perform the PERMANOVA to test effects of temperature, microbiome, and sex on fungal community composition 
   fung.perm.rare.bee <- vegan::adonis2(fung.bray.rare.bee ~ temp_treat + micro_treat + sex, data = sample.fung.rare.bee)
   fung.perm.rare.bee
   
-# Follow up with pairwise comparisons - which sample types differ? microbiome treatment only
+# Follow up with pairwise comparisons - which sample types differ?
   fung.perm.rare.bee.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.rare.bee, sample.fung.rare.bee$micro_treat, p.method = "BH")
   fung.perm.rare.bee.BH
   
-# Set permutations to deal with pseudoreplication
+# Set permutations to deal with graft stage
   perm.rare.bee <- permute::how(within = Within(type = "free"),
                                 plots = Plots(type = "none"),
                                 blocks = sample.fung.rare.bee$graft_stage,
                                 observed = FALSE,
                                 complete = FALSE)
   
-# Perform the PERMANOVA to test effects of treatment on bacterial community composition 
+# Perform the PERMANOVA to test effects of temperature, microbiome, and sex on fungal community composition, using graft stage as a random effect
   fung.perm.rare.bee.graft <- vegan::adonis2(fung.bray.rare.bee ~ temp_treat + micro_treat + sex, permutations = perm.rare.bee, data = sample.fung.rare.bee)
   fung.perm.rare.bee.graft
   
-# Follow up with pairwise comparisons - which sample types differ? microbiome treatment only
+# Follow up with pairwise comparisons - which sample types differ?
   fung.perm.rare.bee.graft.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.rare.bee, sample.fung.rare.bee$micro_treat, p.method = "BH")
   fung.perm.rare.bee.graft.BH
 
@@ -1040,7 +1034,7 @@
   
 # Provisions with bees  
   
-# Calculate the average distance of group members to the group centroid: combo treatment
+# Calculate the average distance of group members to the group centroid
   disp.fung.rare.bee.combo <- vegan::betadisper(fung.bray.rare.bee, sample.fung.rare.bee$combo_treat)
   disp.fung.rare.bee.combo
   
@@ -1052,7 +1046,7 @@
   disp.fung.tHSD.rare.bee.combo <- stats::TukeyHSD(disp.fung.rare.bee.combo)
   disp.fung.tHSD.rare.bee.combo
   
-# Calculate the average distance of group members to the group centroid: just temperature treatment
+# Calculate the average distance of group members to the group centroid
   disp.fung.rare.bee.temp <- vegan::betadisper(fung.bray.rare.bee, sample.fung.rare.bee$temp_treat)
   disp.fung.rare.bee.temp
   
@@ -1060,7 +1054,7 @@
   disp.fung.an.rare.bee.temp <- stats::anova(disp.fung.rare.bee.temp)
   disp.fung.an.rare.bee.temp
   
-# Calculate the average distance of group members to the group centroid: just microbiome treatment
+# Calculate the average distance of group members to the group centroid
   disp.fung.rare.bee.micro <- vegan::betadisper(fung.bray.rare.bee, sample.fung.rare.bee$micro_treat)
   disp.fung.rare.bee.micro
   
@@ -1068,7 +1062,7 @@
   disp.fung.an.rare.bee.micro <- stats::anova(disp.fung.rare.bee.micro)
   disp.fung.an.rare.bee.micro
   
-# Calculate the average distance of group members to the group centroid: just sex
+# Calculate the average distance of group members to the group centroid
   disp.fung.rare.bee.sex <- vegan::betadisper(fung.bray.rare.bee, sample.fung.rare.bee$sex)
   disp.fung.rare.bee.sex
   
@@ -1329,7 +1323,7 @@
   
 # CS vs CN
   
-# Extract results from differential abundance table for initial vs final provision
+# Extract results from differential abundance table for CS vs CN
   CS.CN.fung.rare.bee <- DESeq2::results(desq.dds.fung.rare.bee, contrast = c("combo_treat", "CS", "CN"))
   
 # Order differential abundances by their padj value
@@ -1343,7 +1337,7 @@
   
 # AN vs CN
   
-# Extract results from differential abundance table for initial vs final provision
+# Extract results from differential abundance table for AN vs CN
   AN.CN.fung.rare.bee <- DESeq2::results(desq.dds.fung.rare.bee, contrast = c("combo_treat", "AN", "CN"))
   
 # Order differential abundances by their padj value
@@ -1357,7 +1351,7 @@
   
 # WN vs CN
   
-# Extract results from differential abundance table for initial vs final provision
+# Extract results from differential abundance table for WN vs CN
   WN.CN.fung.rare.bee <- DESeq2::results(desq.dds.fung.rare.bee, contrast = c("combo_treat", "WN", "CN"))
   
 # Order differential abundances by their padj value
@@ -1371,7 +1365,7 @@
   
 # AS vs AN
   
-# Extract results from differential abundance table for initial vs final provision
+# Extract results from differential abundance table for AS vs AN
   AS.AN.fung.rare.bee <- DESeq2::results(desq.dds.fung.rare.bee, contrast = c("combo_treat", "AS", "AN"))
   
 # Order differential abundances by their padj value
@@ -1385,7 +1379,7 @@
   
 # WN vs AN
   
-# Extract results from differential abundance table for initial vs final provision
+# Extract results from differential abundance table for WN vs AN
   WN.AN.fung.rare.bee <- DESeq2::results(desq.dds.fung.rare.bee, contrast = c("combo_treat", "WN", "AN"))
   
 # Order differential abundances by their padj value
@@ -1399,7 +1393,7 @@
   
 # WS vs WN
   
-# Extract results from differential abundance table for initial vs final provision
+# Extract results from differential abundance table for WS vs WN
   WS.WN.fung.rare.bee <- DESeq2::results(desq.dds.fung.rare.bee, contrast = c("combo_treat", "WS", "WN"))
   
 # Order differential abundances by their padj value

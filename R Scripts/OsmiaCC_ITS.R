@@ -585,7 +585,7 @@
   
 # Provisions with bees - females
   
-# Subset data to include just males
+# Subset data to include just females
   fung.rich.bee.F <- fung.rich.bee[fung.rich.bee$sex == "F", ]
   
 # Examine the effect of temperature on Shannon diversity, with graft stage as a random effect

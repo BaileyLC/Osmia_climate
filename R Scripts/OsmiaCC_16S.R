@@ -30,14 +30,14 @@
 # Import data
   seqtab.nochim <- readRDS("OsmiaCC_seqs16Sall.rds")
   taxa <- readRDS("OsmiaCC_taxa16Sall.rds")
-  meta16S_CC <- read.csv("OsmiaCC_master - 16S_worked.csv")
+  meta16S.CC <- read.csv("OsmiaCC_master - 16S_worked.csv")
 
 ## Create phyloseq object ----
 
 # Re-create your df
   samples.out <- rownames(seqtab.nochim)
   samples.out <- stringr::str_sort(samples.out, numeric = TRUE)
-  samples <- data.frame(meta16S_CC)
+  samples <- data.frame(meta16S.CC)
   extractionID <- samples$extractionID
   sample_type <- samples$sample_type
   sampleID <- samples$sampleID
@@ -48,20 +48,20 @@
   sex <- samples$sex
   graft_stage <- samples$graft_stage
   DNA_conc <- samples$DNA_conc
-  sampleinfo <- data.frame(extractionID = extractionID, 
-                           sample_type = sample_type, 
-                           sampleID = sampleID,  
-                           temp_treat = temp_treat, 
-                           micro_treat = micro_treat, 
-                           combo_treat = combo_treat, 
-                           sample_or_control = sample_or_control,
-                           sex = sex,
-                           graft_stage = graft_stage,
-                           DNA_conc = DNA_conc)
-  rownames(sampleinfo) <- samples.out
+  sample.info <- data.frame(extractionID = extractionID, 
+                            sample_type = sample_type, 
+                            sampleID = sampleID,  
+                            temp_treat = temp_treat, 
+                            micro_treat = micro_treat, 
+                            combo_treat = combo_treat, 
+                            sample_or_control = sample_or_control,
+                            sex = sex,
+                            graft_stage = graft_stage,
+                            DNA_conc = DNA_conc)
+  rownames(sample.info) <- samples.out
   
 # Format your data to work with phyloseq
-  ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), sample_data(sampleinfo), tax_table(taxa))
+  ps1 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), sample_data(sample.info), tax_table(taxa))
   ps1
   
 # Display total number of reads, mean, and se in phyloseq obj before processing
@@ -141,11 +141,11 @@
   ps.noncontam
   
 # Remove control samples used for identifying contaminants
-  ps_sub <- phyloseq::subset_samples(ps.noncontam, sample_or_control != "control")
-  ps_sub
+  ps.sub <- phyloseq::subset_samples(ps.noncontam, sample_or_control != "control")
+  ps.sub
   
 # Remove DNA from mitochondria & chloroplast
-  ps2 <- ps_sub %>%
+  ps2 <- ps.sub %>%
     phyloseq::subset_taxa(Kingdom == "Bacteria" &
                             Family  != "mitochondria" &
                               Class   != "Chloroplast"
@@ -165,6 +165,14 @@
   ps3 <- phyloseq::prune_samples(sample_sums(ps2) != 0, ps2)
   ps3
   
+# Transform counts to relative abundances
+  ps3.relabund <- phyloseq::transform_sample_counts(ps3, function(x) x/sum(x))
+  
+# Save taxonomy, raw reads, and relative abundance data
+  write.csv(tax_table(ps3), "OsmiaCC_16Staxa_all.csv")
+  write.csv(otu_table(ps3), "OsmiaCC_16Sotu_all.csv")
+  write.csv(otu_table(ps3.relabund), "OsmiaCC_16S_relabund.csv")
+  
 # Subset provisions collected before and after homogenization
   ps4 <- phyloseq::subset_samples(ps3, sample_type == "initial provision")
   ps4
@@ -181,43 +189,39 @@
   print(plotrix::std.error(sample_sums(ps5)))
   
 # Calculate the reads per sample
-  reads_sample <- microbiome::readcount(ps5)
-  head(reads_sample)
+  reads.sample.NoBee <- microbiome::readcount(ps5)
+  head(reads.sample.NoBee)
   
 # Add reads per sample to meta data
-  sample_data(ps5)$reads_sample <- reads_sample
+  sample_data(ps5)$reads.sample.NoBee <- reads.sample.NoBee
   
 # Save sample metadata
-  meta <- sample_data(ps5)
+  meta.NoBee <- sample_data(ps5)
   
 # How many samples for each developmental stage?  
-  meta %>%
+  meta.NoBee %>%
     group_by(sample_type, combo_treat) %>%
     summarise(N = n(),
-              mean = mean(reads_sample),
-              se = sd(reads_sample)/sqrt(N),
-              max = max(reads_sample),
-              min = min(reads_sample))
-
-# Save taxonomic and ASV counts
-  write.csv(tax_table(ps5), "OsmiaCC_16Staxa_NoBees.csv")
-  write.csv(otu_table(ps5), "OsmiaCC_16Sotu_NoBees.csv")
+              mean = mean(reads.sample.NoBee),
+              se = sd(reads.sample.NoBee)/sqrt(N),
+              max = max(reads.sample.NoBee),
+              min = min(reads.sample.NoBee))
   
 # Add Seq to each taxa name
   taxa_names(ps5) <- paste0("Seq", seq(ntaxa(ps5)))
   
 # Create a df containing the number of reads per OTU
-  readsumsdf <- data.frame(nreads = sort(taxa_sums(ps5), TRUE), 
-                           sorted = 1:ntaxa(ps5), 
-                           type = "OTUs")
+  read.sums.df.NoBee <- data.frame(nreads = sort(taxa_sums(ps5), TRUE), 
+                                                 sorted = 1:ntaxa(ps5), 
+                                                 type = "OTUs")
   
 # Add a column containing the number of reads per sample
-  readsumsdf <- rbind(readsumsdf, data.frame(nreads = sort(sample_sums(ps5), TRUE), 
-                                             sorted = 1:nsamples(ps5), 
-                                             type = "Samples"))
+  read.sums.df.NoBee <- rbind(read.sums.df.NoBee, data.frame(nreads = sort(sample_sums(ps5), TRUE), 
+                                                             sorted = 1:nsamples(ps5), 
+                                                             type = "Samples"))
   
 # Plot number of reads per ASV and sample
-  ggplot(readsumsdf, aes(x = sorted, y = nreads)) + 
+  ggplot(read.sums.df.NoBee, aes(x = sorted, y = nreads)) + 
     geom_bar(stat = "identity") +
     ggtitle("Total number of reads") + 
     scale_y_log10() + 
@@ -235,61 +239,83 @@
   print(plotrix::std.error(sample_sums(ps6)))
   
 # Calculate the reads per sample
-  reads_sample <- microbiome::readcount(ps6)
-  head(reads_sample)
+  reads.sample.bee <- microbiome::readcount(ps6)
+  head(reads.sample.bee)
   
 # Add reads per sample to meta data
-  sample_data(ps6)$reads_sample <- reads_sample
+  sample_data(ps6)$reads.sample.bee <- reads.sample.bee
   
 # Save sample metadata
-  meta <- sample_data(ps6)
+  meta.bee <- sample_data(ps6)
 
-# How many samples for each developmental stage?  
-  meta %>%
-    group_by(sample_type, combo_treat) %>%
+# Read stats for provisions with bees - males & females
+  meta.bee %>%
+    group_by(combo_treat) %>%
     summarise(N = n(),
-              mean = mean(reads_sample),
-              se = sd(reads_sample)/sqrt(N),
-              max = max(reads_sample),
-              min = min(reads_sample))
-
-# Save taxonomic and ASV counts
-  write.csv(tax_table(ps6), "OsmiaCC_16Staxa_Bees.csv")
-  write.csv(otu_table(ps6), "OsmiaCC_16Sotu_Bees.csv")
+              mean = mean(reads.sample.bee),
+              se = sd(reads.sample.bee)/sqrt(N),
+              max = max(reads.sample.bee),
+              min = min(reads.sample.bee))
+  
+# Subset data by sex
+  meta.bee.M <- meta.bee[meta.bee$sex == "M", ]
+  meta.bee.F <- meta.bee[meta.bee$sex == "F", ]
+  
+# Read stats for provisions with bees - males
+  meta.bee.M %>%
+    group_by(combo_treat) %>%
+    summarise(N = n(),
+              mean = mean(reads.sample.bee),
+              se = sd(reads.sample.bee)/sqrt(N),
+              max = max(reads.sample.bee),
+              min = min(reads.sample.bee))
+  
+# Read stats for provisions with bees - males
+  meta.bee.F %>%
+    group_by(combo_treat) %>%
+    summarise(N = n(),
+              mean = mean(reads.sample.bee),
+              se = sd(reads.sample.bee)/sqrt(N),
+              max = max(reads.sample.bee),
+              min = min(reads.sample.bee))
   
 # Add Seq to each taxa name
   taxa_names(ps6) <- paste0("Seq", seq(ntaxa(ps6)))
   
 # Create a df containing the number of reads per OTU
-  readsumsdf <- data.frame(nreads = sort(taxa_sums(ps6), TRUE), 
-                           sorted = 1:ntaxa(ps6), 
-                           type = "OTUs")
+  read.sums.df.bee <- data.frame(nreads = sort(taxa_sums(ps6), TRUE), 
+                                 sorted = 1:ntaxa(ps6), 
+                                 type = "OTUs")
   
 # Add a column containing the number of reads per sample
-  readsumsdf <- rbind(readsumsdf, data.frame(nreads = sort(sample_sums(ps6), TRUE), 
-                                             sorted = 1:nsamples(ps6), 
-                                             type = "Samples"))
+  read.sums.df.bee <- rbind(read.sums.df.bee, data.frame(nreads = sort(sample_sums(ps6), TRUE), 
+                                                         sorted = 1:nsamples(ps6), 
+                                                         type = "Samples"))
   
 # Plot number of reads per ASV and sample
-  ggplot(readsumsdf, aes(x = sorted, y = nreads)) + 
+  ggplot(read.sums.df.bee, aes(x = sorted, y = nreads)) + 
     geom_bar(stat = "identity") +
     ggtitle("Total number of reads") + 
     scale_y_log10() + 
     facet_wrap(~ type, 1, scales = "free")
+  
+# Subset data
+  ps7 <- phyloseq::subset_samples(ps3, sample_type != "initial provision")
+  ps7
   
 ## Richness and alpha diversity ----  
   
 # Provisions without bees  
   
 # Estimate Shannon, Simpson & observed richness
-  bactrich <- phyloseq::estimate_richness(ps5, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
+  bact.rich.NoBee <- phyloseq::estimate_richness(ps5, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
   
-# Build df with metadata 
-  bactrich$sampleID <- sample_data(ps5)$sampleID
-  bactrich$sample_type <- sample_data(ps5)$sample_type
-  bactrich$temp_treat <- sample_data(ps5)$temp_treat
-  bactrich$micro_treat <- sample_data(ps5)$micro_treat
-  bactrich$combo_treat <- sample_data(ps5)$combo_treat
+# Build df with metadata
+  bact.rich.NoBee$sampleID <- sample_data(ps5)$sampleID
+  bact.rich.NoBee$sample_type <- sample_data(ps5)$sample_type
+  bact.rich.NoBee$temp_treat <- sample_data(ps5)$temp_treat
+  bact.rich.NoBee$micro_treat <- sample_data(ps5)$micro_treat
+  bact.rich.NoBee$combo_treat <- sample_data(ps5)$combo_treat
   
 # Plot Shannon index, Simpson index, & observed richness  
   phyloseq::plot_richness(ps5, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
@@ -297,23 +323,23 @@
                 xlab("")
   
 # Remove samples with 0 species richness 
-  bactrich[bactrich == 0] <- NA
-  bactrich <- bactrich[complete.cases(bactrich), ]
+  bact.rich.NoBee[bact.rich.NoBee == 0] <- NA
+  bact.rich.NoBee <- bact.rich.NoBee[complete.cases(bact.rich.NoBee), ]
 
 # Examine interactive effects of temperature on Shannon diversity
-  mod1 <- aov(Shannon ~ temp_treat, data = bactrich)
+  mod1 <- aov(Shannon ~ temp_treat, data = bact.rich.NoBee)
   stats::anova(mod1)
 
 # Examine interactive effects of temperature on Simpson diversity
-  mod2 <- aov(Simpson ~ temp_treat, data = bactrich)
+  mod2 <- aov(Simpson ~ temp_treat, data = bact.rich.NoBee)
   stats::anova(mod2)
 
 # Examine interactive effects of temperature on observed richness
-  mod3 <- aov(Observed ~ temp_treat, data = bactrich)
+  mod3 <- aov(Observed ~ temp_treat, data = bact.rich.NoBee)
   stats::anova(mod3)
   
 # Set color scheme
-  climate_colors <- c("CS" = "#64B5F6",
+  climate.colors <- c("CS" = "#64B5F6",
                       "CN" = "#1565C0",
                       "AS" = "#9E9E9E",
                       "AN" = "#616161",
@@ -321,7 +347,7 @@
                       "WN" = "#C62828")
   
 # Set labels
-  climate_labs <- c("CS" = "Cool: Sterile",
+  climate.labs <- c("CS" = "Cool: Sterile",
                     "CN" = "Cool: Natural",
                     "AS" = "Ambient: Sterile",
                     "AN" = "Ambient: Natural",
@@ -329,133 +355,42 @@
                     "WN" = "Warm: Natural")
   
 # Reorder x-axis
-  bactrich$combo_treat <- factor(bactrich$combo_treat, levels = c("CS", "CN","AS", "AN","WS", "WN"))
+  bact.rich.NoBee$combo_treat <- factor(bact.rich.NoBee$combo_treat, levels = c("CS", "CN","AS", "AN","WS", "WN"))
   
 # Boxplot of Shannon index
-  OsmiaCC_Shannon_bact <- ggplot(bactrich, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
-                              geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-                              geom_jitter(size = 1, alpha = 0.9) +
-                              theme_bw() +
-                              theme(legend.position = "none") +
-                              theme(panel.grid.major = element_blank(),
-                                    panel.grid.minor = element_blank()) +
-                              scale_color_manual(name = "Treatment", 
-                                                 values = climate_colors,
-                                                 labels = climate_labs) +
-                              labs(title = "A") +
-                              xlab("Treatment") +
-                              ylab("Shannon index")
-  OsmiaCC_Shannon_bact
+  OsmiaCC.Shannon.bact.NoBee <- ggplot(bact.rich.NoBee, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment", 
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    labs(title = "A") +
+                                    xlab("Treatment") +
+                                    ylab("Shannon index")
+  OsmiaCC.Shannon.bact.NoBee
   
 # Boxplot of Simpson index
-  OsmiaCC_Simpson_bact <- ggplot(bactrich, aes(x = combo_treat, y = Simpson, color = combo_treat)) + 
-                              geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-                              geom_jitter(size = 1, alpha = 0.9) +
-                              theme_bw() +
-                              theme(legend.position = "none") +
-                              theme(panel.grid.major = element_blank(),
-                                    panel.grid.minor = element_blank()) +
-                              scale_color_manual(name = "Treatment", 
-                                                 values = climate_colors,
-                                                 labels = climate_labs) +
-                              labs(title = "A") + 
-                              xlab("Treatment") +
-                              ylab("Simpson index")
-  OsmiaCC_Simpson_bact
+  OsmiaCC.Simpson.bact.NoBee <- ggplot(bact.rich.NoBee, aes(x = combo_treat, y = Simpson, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment", 
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    labs(title = "A") + 
+                                    xlab("Treatment") +
+                                    ylab("Simpson index")
+  OsmiaCC.Simpson.bact.NoBee
   
 # Boxplot of Observed richness
-  OsmiaCC_Observed_bact <- ggplot(bactrich, aes(x = combo_treat, y = Observed, color = combo_treat)) + 
-                              geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-                              geom_jitter(size = 1, alpha = 0.9) +
-                              theme_bw() +
-                              theme(legend.position = "none") +
-                              theme(panel.grid.major = element_blank(),
-                                    panel.grid.minor = element_blank()) +
-                              scale_color_manual(name = "Treatment",
-                                                 values = climate_colors,
-                                                 labels = climate_labs) +
-                              xlab("Treatment") +
-                              ylab("Observed richness") +
-                              ggtitle("A")
-  OsmiaCC_Observed_bact
-
-# Provisions with bees    
-  
-# Estimate Shannon, Simpson & observed richness
-  bactrich_bees <- phyloseq::estimate_richness(ps6, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
-  
-# Build df with metadata 
-  bactrich_bees$sampleID <- sample_data(ps6)$sampleID
-  bactrich_bees$sample_type <- sample_data(ps6)$sample_type
-  bactrich_bees$temp_treat <- sample_data(ps6)$temp_treat
-  bactrich_bees$micro_treat <- sample_data(ps6)$micro_treat
-  bactrich_bees$combo_treat <- sample_data(ps6)$combo_treat
-  bactrich_bees$graft_stage <- sample_data(ps6)$graft_stage
-  bactrich_bees$sex <- sample_data(ps6)$sex
-  
-# Plot Shannon, Simpson & observed richness  
-  phyloseq::plot_richness(ps6, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
-                theme_bw() +
-                xlab("")
-  
-# Remove samples with 0 species richness 
-  bactrich_bees[bactrich_bees == 0] <- NA
-  bactrich_bees <- bactrich_bees[complete.cases(bactrich_bees), ]
-  
-# Examine interactive effects of temperature on Shannon diversity
-  mod4 <- nlme::lme(Shannon ~ temp_treat + sex, random = ~1|graft_stage, data = bactrich_bees)
-  stats::anova(mod4)
-  
-# Examine interactive effects of temperature on Simpson diversity
-  mod5 <- nlme::lme(Simpson ~ temp_treat + sex, random = ~1|graft_stage, data = bactrich_bees)
-  stats::anova(mod5)
-  
-# Examine interactive effects of temperature on observed richness
-  mod6 <- nlme::lme(Observed ~ temp_treat + sex, random = ~1|graft_stage, data = bactrich_bees)
-  stats::anova(mod6)
-  
-  stats::shapiro.test(mod6$residuals)
-  
-  emmeans(mod6, pairwise ~ temp_treat, adjust = "tukey")
-  emmeans(mod6, pairwise ~ sex, adjust = "tukey")
-  
-# Reorder x-axis
-  bactrich_bees$combo_treat <- factor(bactrich_bees$combo_treat, levels = c("CN","AN","WN"))
-
-# Boxplot of Shannon index
-  OsmiaCC_Shannon_bact_bees <- ggplot(bactrich_bees, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
-                                  geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-                                  geom_jitter(size = 1, alpha = 0.9) +
-                                  theme_bw() +
-                                  theme(legend.position = "none") +
-                                  theme(panel.grid.major = element_blank(),
-                                        panel.grid.minor = element_blank()) +
-                                  scale_color_manual(name = "Treatment", 
-                                                     values = climate_colors,
-                                                     labels = climate_labs) +
-                                  labs(title = "A") +
-                                  xlab("Treatment") +
-                                  ylab("Shannon index")
-  OsmiaCC_Shannon_bact_bees
-  
-# Boxplot of Simpson index
-  OsmiaCC_Simpson_bact_bees <- ggplot(bactrich_bees, aes(x = combo_treat, y = Simpson, color = combo_treat)) + 
-                                  geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-                                  geom_jitter(size = 1, alpha = 0.9) +
-                                  theme_bw() +
-                                  theme(legend.position = "none") +
-                                  theme(panel.grid.major = element_blank(),
-                                        panel.grid.minor = element_blank()) +
-                                  scale_color_manual(name = "Treatment", 
-                                                     values = climate_colors,
-                                                     labels = climate_labs) +
-                                  labs(title = "A") + 
-                                  xlab("Treatment") +
-                                  ylab("Simpson index")
-  OsmiaCC_Simpson_bact_bees
-  
-# Boxplot of Observed richness
-  OsmiaCC_Observed_bact_bees <- ggplot(bactrich_bees, aes(x = combo_treat, y = Observed, color = combo_treat)) + 
+  OsmiaCC.Observed.bact.NoBee <- ggplot(bact.rich.NoBee, aes(x = combo_treat, y = Observed, color = combo_treat)) + 
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
@@ -463,14 +398,244 @@
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment",
-                                                       values = climate_colors,
-                                                       labels = climate_labs) +
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
                                     ggtitle("A")
-  OsmiaCC_Observed_bact_bees
+  OsmiaCC.Observed.bact.NoBee
+
+# Provisions with bees    
   
+# Estimate Shannon, Simpson & observed richness
+  bact.rich.bee <- phyloseq::estimate_richness(ps6, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
+  
+# Build df with metadata 
+  bact.rich.bee$sampleID <- sample_data(ps6)$sampleID
+  bact.rich.bee$sample_type <- sample_data(ps6)$sample_type
+  bact.rich.bee$temp_treat <- sample_data(ps6)$temp_treat
+  bact.rich.bee$micro_treat <- sample_data(ps6)$micro_treat
+  bact.rich.bee$combo_treat <- sample_data(ps6)$combo_treat
+  bact.rich.bee$graft_stage <- sample_data(ps6)$graft_stage
+  bact.rich.bee$sex <- sample_data(ps6)$sex
+  
+# Plot Shannon, Simpson & observed richness  
+  phyloseq::plot_richness(ps6, x = "sample_type", measures = c("Shannon", "Simpson", "Observed"), color = "combo_treat") + 
+                theme_bw() +
+                xlab("")
+  
+# Remove samples with 0 species richness 
+  bact.rich.bee[bact.rich.bee == 0] <- NA
+  bact.rich.bee <- bact.rich.bee[complete.cases(bact.rich.bee), ]
+  
+# Examine interactive effects of temperature on Shannon diversity
+  mod4 <- nlme::lme(Shannon ~ temp_treat + sex, random = ~1|graft_stage, data = bact.rich.bee)
+  stats::anova(mod4)
+  
+# Examine interactive effects of temperature on Simpson diversity
+  mod5 <- nlme::lme(Simpson ~ temp_treat + sex, random = ~1|graft_stage, data = bact.rich.bee)
+  stats::anova(mod5)
+  
+# Examine interactive effects of temperature on observed richness
+  mod6 <- nlme::lme(Observed ~ temp_treat + sex, random = ~1|graft_stage, data = bact.rich.bee)
+  stats::anova(mod6)
+  
+# Post-hoc test
+  emmeans(mod6, pairwise ~ sex, adjust = "tukey")
+  
+# Reorder x-axis
+  bact.rich.bee$combo_treat <- factor(bact.rich.bee$combo_treat, levels = c("CN","AN","WN"))
+
+# Boxplot of Shannon index
+  OsmiaCC.Shannon.bact.bee <- ggplot(bact.rich.bee, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
+                                  geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                  geom_jitter(size = 1, alpha = 0.9) +
+                                  theme_bw() +
+                                  theme(legend.position = "none") +
+                                  theme(panel.grid.major = element_blank(),
+                                        panel.grid.minor = element_blank()) +
+                                  scale_color_manual(name = "Treatment", 
+                                                     values = climate.colors,
+                                                     labels = climate.labs) +
+                                  labs(title = "A") +
+                                  xlab("Treatment") +
+                                  ylab("Shannon index")
+  OsmiaCC.Shannon.bact.bee
+  
+# Boxplot of Simpson index
+  OsmiaCC.Simpson.bact.bee <- ggplot(bact.rich.bee, aes(x = combo_treat, y = Simpson, color = combo_treat)) + 
+                                  geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                  geom_jitter(size = 1, alpha = 0.9) +
+                                  theme_bw() +
+                                  theme(legend.position = "none") +
+                                  theme(panel.grid.major = element_blank(),
+                                        panel.grid.minor = element_blank()) +
+                                  scale_color_manual(name = "Treatment", 
+                                                     values = climate.colors,
+                                                     labels = climate.labs) +
+                                  labs(title = "A") + 
+                                  xlab("Treatment") +
+                                  ylab("Simpson index")
+  OsmiaCC.Simpson.bact.bee
+  
+# Boxplot of Observed richness
+  OsmiaCC.Observed.bact.bee <- ggplot(bact.rich.bee, aes(x = combo_treat, y = Observed, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment",
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    xlab("Treatment") +
+                                    ylab("Observed richness") +
+                                    ggtitle("A")
+  OsmiaCC.Observed.bact.bee
+  
+# Provisions with bees - males
+  
+# Subset data to include just males
+  bact.rich.bee.M <- bact.rich.bee[bact.rich.bee$sex == "M", ]
+  
+# Examine interactive effects of temperature on Shannon diversity
+  mod7 <- nlme::lme(Shannon ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.M)
+  stats::anova(mod7)
+  
+# Examine interactive effects of temperature on Simpson diversity
+  mod8 <- nlme::lme(Simpson ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.M)
+  stats::anova(mod8)
+  
+# Examine interactive effects of temperature on Observed richness
+  mod9 <- nlme::lme(Observed ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.M)
+  stats::anova(mod9)
+  
+# Post-hoc test
+  emmeans(mod9, pairwise ~ temp_treat, adjust = "tukey")
+  
+# Reorder x-axis
+  bact.rich.bee.M$combo_treat <- factor(bact.rich.bee.M$combo_treat, levels = c("CN","AN","WN"))
+  
+# Boxplot of Shannon index
+  OsmiaCC.Shannon.bact.bee.M <- ggplot(bact.rich.bee.M, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment", 
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    labs(title = "A") +
+                                    xlab("Treatment") +
+                                    ylab("Shannon index")
+  OsmiaCC.Shannon.bact.bee.M
+  
+# Boxplot of Simpson index
+  OsmiaCC.Simpson.bact.bee.M <- ggplot(bact.rich.bee.M, aes(x = combo_treat, y = Simpson, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment", 
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    labs(title = "A") + 
+                                    xlab("Treatment") +
+                                    ylab("Simpson index")
+  OsmiaCC.Simpson.bact.bee.M
+  
+# Boxplot of Observed richness
+  OsmiaCC.Observed.bact.bee.M <- ggplot(bact.rich.bee.M, aes(x = combo_treat, y = Observed, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment",
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    xlab("Treatment") +
+                                    ylab("Observed richness") +
+                                    ggtitle("A")
+  OsmiaCC.Observed.bact.bee.M
+  
+# Provisions with bees - females
+  
+# Subset data to include just males
+  bact.rich.bee.F <- bact.rich.bee[bact.rich.bee$sex == "F", ]
+  
+# Examine interactive effects of temperature on Shannon diversity
+  mod10 <- nlme::lme(Shannon ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.F)
+  stats::anova(mod10)
+  
+# Examine interactive effects of temperature on Simpson diversity
+  mod11 <- nlme::lme(Simpson ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.F)
+  stats::anova(mod11)
+  
+# Examine interactive effects of temperature on Observed richness
+  mod12 <- nlme::lme(Observed ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.F)
+  stats::anova(mod12)
+  
+# Reorder x-axis
+  bact.rich.bee.F$combo_treat <- factor(bact.rich.bee.F$combo_treat, levels = c("CN","AN","WN"))
+  
+# Boxplot of Shannon index
+  OsmiaCC.Shannon.bact.bee.F <- ggplot(bact.rich.bee.F, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment", 
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    labs(title = "A") +
+                                    xlab("Treatment") +
+                                    ylab("Shannon index")
+  OsmiaCC.Shannon.bact.bee.F
+  
+# Boxplot of Simpson index
+  OsmiaCC.Simpson.bact.bee.F <- ggplot(bact.rich.bee.F, aes(x = combo_treat, y = Simpson, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment", 
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    labs(title = "A") + 
+                                    xlab("Treatment") +
+                                    ylab("Simpson index")
+  OsmiaCC.Simpson.bact.bee.F
+  
+# Boxplot of Observed richness
+  OsmiaCC.Observed.bact.bee.F <- ggplot(bact.rich.bee.F, aes(x = combo_treat, y = Observed, color = combo_treat)) + 
+                                    geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                    geom_jitter(size = 1, alpha = 0.9) +
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    scale_color_manual(name = "Treatment",
+                                                       values = climate.colors,
+                                                       labels = climate.labs) +
+                                    xlab("Treatment") +
+                                    ylab("Observed richness") +
+                                    ggtitle("A")
+  OsmiaCC.Observed.bact.bee.F
+
 ## Evenness ----
+
+# Provisions with bees
   
 # Extract ASV counts per sample
   otu <- phyloseq::otu_table(ps6)
@@ -485,18 +650,18 @@
   J <- H/log(S)
   
 # Create df with diversity measures and metadata
-  bact_evenness <- cbind(shannon = H, richness = S, pielou = J, sample_data(ps6))
-  bact_evenness
+  bact.evenness <- cbind(shannon = H, richness = S, pielou = J, sample_data(ps6))
+  bact.evenness
   
 # Remove samples with NaNs
-  bact_evenness <- bact_evenness[complete.cases(bact_evenness), ]
-  
+  bact.evenness <- bact.evenness[complete.cases(bact.evenness), ]
+
 # Examine the effects of temperature treatment and sex on evenness using graft stage as a random effect
-  mod7 <- nlme::lme(pielou ~ temp_treat + sex, random = ~1|graft_stage, data = bact_evenness)
-  stats::anova(mod7)
+  mod13 <- nlme::lme(pielou ~ temp_treat + sex, random = ~1|graft_stage, data = bact.evenness)
+  stats::anova(mod13)
   
 # Plot
-  OsmiaCC_Pielou_bact <- ggplot(bact_evenness, aes(x = combo_treat, y = pielou, color = combo_treat)) +
+  OsmiaCC.Pielou.bact <- ggplot(bact.evenness, aes(x = combo_treat, y = pielou, color = combo_treat)) +
                             geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                             geom_jitter(size = 1, alpha = 0.9) +
                             theme_bw() +
@@ -504,111 +669,165 @@
                             theme(panel.grid.major = element_blank(),
                                   panel.grid.minor = element_blank()) +
                             ylab("Pielou's Evenness") +
+                            ylim(0, 1.0) +
                             xlab("Treatment") +
-                            scale_color_manual(values = climate_colors,
-                                               labels = climate_labs)
-  OsmiaCC_Pielou_bact
+                            scale_color_manual(values = climate.colors,
+                                               labels = climate.labs)
+  OsmiaCC.Pielou.bact
   
 ## Beta diversity with relative abundance data ----
+  
+# Provisions with and without bees
+  
+# Remove CS sample
+  sample_data(ps7) <- sample_data(ps7)[!(sample_data(ps7)$combo_treat == "CS"), ]
+  
+# Calculate the relative abundance of each otu  
+  ps.prop.bact <- phyloseq::transform_sample_counts(ps7, function(otu) otu/sum(otu))
+  
+# Create a distance matrix using Bray Curtis dissimilarity
+  bact.bray <- phyloseq::distance(ps.prop.bact, method = "bray")
+  
+# Convert to data frame
+  sample.bact <- data.frame(sample_data(ps7))
+  
+# Perform the PERMANOVA to test effects of treatments on bacterial community composition
+  bact.perm <- vegan::adonis2(bact.bray ~ temp_treat + sample_type, data = sample.bact)
+  bact.perm
   
 # Provisions without bees
   
 # Calculate the relative abundance of each otu  
-  ps.prop_bact_NoBees <- phyloseq::transform_sample_counts(ps5, function(otu) otu/sum(otu))
+  ps.prop.bact.NoBee <- phyloseq::transform_sample_counts(ps5, function(otu) otu/sum(otu))
   
 # Create a distance matrix using Bray Curtis dissimilarity
-  bact_bray_NoBees <- phyloseq::distance(ps.prop_bact_NoBees, method = "bray")
+  bact.bray.NoBee <- phyloseq::distance(ps.prop.bact.NoBee, method = "bray")
   
 # Convert to data frame
-  samplebact_NoBees <- data.frame(sample_data(ps5))
+  sample.bact.NoBee <- data.frame(sample_data(ps5))
   
 # Perform the PERMANOVA to test effects of treatments on bacterial community composition
-  bact_perm_NoBees <- vegan::adonis2(bact_bray ~ temp_treat * micro_treat, data = samplebact)
-  bact_perm_NoBees
+  bact.perm.NoBee <- vegan::adonis2(bact.bray.NoBee ~ temp_treat, data = sample.bact.NoBee)
+  bact.perm.NoBee
   
 # Provisions with bees
   
+# Remove CS sample
+  sample_data(ps6) <- sample_data(ps6)[!(sample_data(ps6)$combo_treat == "CS"), ]
+
 # Calculate the relative abundance of each otu  
-  ps.prop_bact_bees <- phyloseq::transform_sample_counts(ps6, function(otu) otu/sum(otu))
+  ps.prop.bact.bee <- phyloseq::transform_sample_counts(ps6, function(otu) otu/sum(otu))
   
 # Create a distance matrix using Bray Curtis dissimilarity
-  bact_bray_bees <- phyloseq::distance(ps.prop_bact_bees, method = "bray")
+  bact.bray.bee <- phyloseq::distance(ps.prop.bact.bee, method = "bray")
   
 # Convert to data frame
-  samplebact_bees <- data.frame(sample_data(ps6))
+  sample.bact.bee <- data.frame(sample_data(ps6))
   
 # Perform the PERMANOVA to test effects of treatments on bacterial community composition
-  bact_perm_bees <- vegan::adonis2(bact_bray_bees ~ temp_treat * micro_treat, data = samplebact_bees)
-  bact_perm_bees
+  bact.perm.bee <- vegan::adonis2(bact.bray.bee ~ temp_treat, data = sample.bact.bee)
+  bact.perm.bee
   
 # Set permutations to deal with graft stage
-  perm_relabund <- permute::how(within = Within(type = "free"),
+  perm.relabund <- permute::how(within = Within(type = "free"),
                                 plots = Plots(type = "none"),
-                                blocks = samplebact_bees$graft_stage,
+                                blocks = sample.bact.bee$graft_stage,
                                 observed = FALSE,
                                 complete = FALSE)
   
 # Perform the PERMANOVA to test effects of treatments on bacterial community composition, dealing with graft stage
-  bact_perm_graft <- vegan::adonis2(bact_bray_bees ~ temp_treat * micro_treat, permutations = perm_relabund, data = samplebact_bees)
-  bact_perm_graft
+  bact.perm.bee.graft <- vegan::adonis2(bact.bray.bee ~ temp_treat, permutations = perm.relabund, data = sample.bact.bee)
+  bact.perm.bee.graft
   
 ## Test for homogeneity of multivariate dispersion with relative abundance data ----
+  
+# Provisions with and without bees
+
+# Calculate the average distance of group members to the group centroid
+  disp.bact.combo <- vegan::betadisper(bact.bray, sample.bact$combo_treat)
+  disp.bact.combo
+  
+# Do any of the group dispersions differ?
+  disp.bact.an.combo <- stats::anova(disp.bact.combo)
+  disp.bact.an.combo
+  
+# Calculate the average distance of group members to the group centroid
+  disp.bact.type <- vegan::betadisper(bact.bray, sample.bact$sample_type)
+  disp.bact.type
+  
+# Do any of the group dispersions differ?
+  disp.bact.an.type <- stats::anova(disp.bact.type)
+  disp.bact.an.type
   
 # Provisions without bees  
   
 # Calculate the average distance of group members to the group centroid
-  disp_bact_NoBees <- vegan::betadisper(bact_bray_NoBees, samplebact_NoBees$combo_treat)
-  disp_bact_NoBees
+  disp.bact.NoBee <- vegan::betadisper(bact.bray.NoBee, sample.bact.NoBee$combo_treat)
+  disp.bact.NoBee
   
 # Do any of the group dispersions differ?
-  disp_bact_an <- stats::anova(disp_bact_NoBees)
-  disp_bact_an
+  disp.bact.an.NoBee <- stats::anova(disp.bact.NoBee)
+  disp.bact.an.NoBee
   
 # Which group dispersions differ?
-  disp_bact_ttest_NoBees <- vegan::permutest(disp_bact_NoBees, 
-                                             control = permControl(nperm = 999),
-                                             pairwise = TRUE)
-  disp_bact_ttest_NoBees
-  
-# Which group dispersions differ?
-  disp_bact_tHSD_NoBees <- stats::TukeyHSD(disp_bact_NoBees)
-  disp_bact_tHSD_NoBees
+  disp.bact.tHSD.NoBee <- stats::TukeyHSD(disp.bact.NoBee)
+  disp.bact.tHSD.NoBee
   
 # Provisions with bees  
   
 # Calculate the average distance of group members to the group centroid
-  disp_bact <- vegan::betadisper(bact_bray, samplebact$combo_treat)
-  disp_bact
+  disp.bact.bee.combo <- vegan::betadisper(bact.bray.bee, sample.bact.bee$combo_treat)
+  disp.bact.bee.combo
   
 # Do any of the group dispersions differ?
-  disp_bact_an <- stats::anova(disp_bact)
-  disp_bact_an
-  
-# Which group dispersions differ?
-  disp_bact_ttest <- vegan::permutest(disp_bact, 
-                                      control = permControl(nperm = 999),
-                                      pairwise = TRUE)
-  disp_bact_ttest
-  
-# Which group dispersions differ?
-  disp_bact_tHSD <- stats::TukeyHSD(disp_bact)
-  disp_bact_tHSD
+  disp.bact.an.bee.combo <- stats::anova(disp.bact.bee.combo)
+  disp.bact.an.bee.combo
   
 # Calculate the average distance of group members to the group centroid: just temperature treatment
-  disp_bact_temp <- vegan::betadisper(bact_bray, samplebact$temp_treat)
-  disp_bact_temp
+  disp.bact.bee.temp <- vegan::betadisper(bact.bray.bee, sample.bact.bee$temp_treat)
+  disp.bact.bee.temp
   
 # Do any of the group dispersions differ?  
-  disp_bact_temp_an <- stats::anova(disp_bact_temp)
-  disp_bact_temp_an
+  disp.bact.an.bee.temp <- stats::anova(disp.bact.bee.temp)
+  disp.bact.an.bee.temp
 
 ## Ordination with relative abundance data ----  
   
+# Provisions with and without bees
+  
 # PCoA using Bray-Curtis distance
-  ord.pcoa.bray_bees <- phyloseq::ordinate(ps.prop_bact_bees, method = "PCoA", distance = "bray")
+  ord.pcoa.bray <- phyloseq::ordinate(ps.prop.bact, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.bact)$combo_treat <- factor(sample_data(ps.prop.bact)$combo_treat, levels = c("CN", "AN", "WN"))
+
+# Plot ordination
+  OsmiaCC.PCoA.bact <- plot_ordination(ps.prop.bact, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
+                          theme_bw() +
+                          theme(legend.position = "none") +
+                          theme(text = element_text(size = 16)) +
+                          theme(panel.grid.major = element_blank(),
+                                panel.grid.minor = element_blank()) +
+                          theme(legend.justification = "left", 
+                                legend.title = element_text(size = 16, colour = "black"), 
+                                legend.text = element_text(size = 14, colour = "black")) + 
+                          geom_point(size = 3) +
+                          scale_color_manual(values = climate.colors) +
+                          labs(title = "A",
+                               color = "Treatment",
+                               shape = "Sample Type")
+  OsmiaCC.PCoA.bact
+  
+# Provisions without bees
+  
+# PCoA using Bray-Curtis distance
+  ord.pcoa.bray.NoBee <- phyloseq::ordinate(ps.prop.bact.NoBee, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.bact.NoBee)$combo_treat <- factor(sample_data(ps.prop.bact.NoBee)$combo_treat, levels = c("CN", "AN", "WN"))
   
 # Plot ordination
-  OsmiaCC_PCoA_bact_bees <- plot_ordination(ps.prop_bact_bees, ord.pcoa.bray_bees, color = "combo_treat", shape = "sample_type") + 
+  OsmiaCC.PCoA.bact.NoBee <- plot_ordination(ps.prop.bact.NoBee, ord.pcoa.bray.NoBee, color = "combo_treat") + 
                                 theme_bw() +
                                 theme(legend.position = "none") +
                                 theme(text = element_text(size = 16)) +
@@ -618,13 +837,38 @@
                                       legend.title = element_text(size = 16, colour = "black"), 
                                       legend.text = element_text(size = 14, colour = "black")) + 
                                 geom_point(size = 3) +
-                                scale_color_manual(values = climate_colors) +
+                                scale_color_manual(values = climate.colors) +
                                 labs(title = "A",
-                                     color = "Treatment",
-                                     shape = "Sample Type")
-  OsmiaCC_PCoA_bact_bees
+                                     color = "Treatment")
+  OsmiaCC.PCoA.bact.NoBee
+  
+# Provisions with bees  
+  
+# PCoA using Bray-Curtis distance
+  ord.pcoa.bray.bee <- phyloseq::ordinate(ps.prop.bact.bee, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.bact.bee)$combo_treat <- factor(sample_data(ps.prop.bact.bee)$combo_treat, levels = c("CN", "AN", "WN"))
+  
+# Plot ordination
+  OsmiaCC.PCoA.bact.bee <- plot_ordination(ps.prop.bact.bee, ord.pcoa.bray.bee, color = "combo_treat") + 
+                                theme_bw() +
+                                theme(legend.position = "none") +
+                                theme(text = element_text(size = 16)) +
+                                theme(panel.grid.major = element_blank(),
+                                      panel.grid.minor = element_blank()) +
+                                theme(legend.justification = "left", 
+                                      legend.title = element_text(size = 16, colour = "black"), 
+                                      legend.text = element_text(size = 14, colour = "black")) + 
+                                geom_point(size = 3) +
+                                scale_color_manual(values = climate.colors) +
+                                labs(title = "A",
+                                     color = "Treatment")
+  OsmiaCC.PCoA.bact.bee
   
 ## Rarefaction ----
+  
+# Provisions with bees
   
 # Produce rarefaction curves
   tab <- otu_table(ps6)
@@ -632,247 +876,170 @@
   tab <- t(tab)
   
 # Save rarefaction data as a tidy df
-  rare_tidy_bact <- vegan::rarecurve(tab, label = FALSE, tidy = TRUE)
+  rare.tidy.bact.bee <- vegan::rarecurve(tab, label = FALSE, tidy = TRUE)
   
 # Plot rarefaction curve
-  OsmiaCC_rare_bact <- ggplot(rare_tidy_bact, aes(x = Sample, y = Species, group = Site)) +
-                          geom_line() +
-                          theme_bw() +
-                          theme(panel.grid.major = element_blank(),
-                                panel.grid.minor = element_blank()) +
-                          labs(title = "A") + 
-                          xlab("Number of reads") +
-                          ylab("Number of species")
-  OsmiaCC_rare_bact
+  OsmiaCC.rare.bact.bee <- ggplot(rare.tidy.bact.bee, aes(x = Sample, y = Species, group = Site)) +
+                              geom_line() +
+                              theme_bw() +
+                              theme(panel.grid.major = element_blank(),
+                                    panel.grid.minor = element_blank()) +
+                              labs(title = "A") + 
+                              xlab("Number of reads") +
+                              ylab("Number of species")
+  OsmiaCC.rare.bact.bee
   
 # Set seed and rarefy
-  #set.seed(1234)
-  #rareps_bact <- phyloseq::rarefy_even_depth(ps6, sample.size = 10)
+  set.seed(1234)
+  rareps.bact.bee <- phyloseq::rarefy_even_depth(ps6, sample.size = 15)
   
 ## Beta diversity with rarefied data ----  
   
+# Provisions with bees  
+  
 # Create a distance matrix using Bray Curtis dissimilarity
-  #bact_bray_rare <- phyloseq::distance(rareps_bact, method = "bray")
+  bact.bray.rare.bee <- phyloseq::distance(rareps.bact.bee, method = "bray")
   
 # Convert to data frame
-  #samplebact_rare <- data.frame(sample_data(rareps_bact))
+  sample.bact.rare.bee <- data.frame(sample_data(rareps.bact.bee))
   
 # Perform the PERMANOVA to test effects of treatment on bacterial community composition  
-  #bact_perm_rare <- vegan::adonis2(bact_bray_rare ~ temp_treat, data = samplebact_rare)
-  #bact_perm_rare
-  
-# Follow up with pairwise comparisons - which sample types differ?
-  #bact_perm_rare_BH <- RVAideMemoire::pairwise.perm.manova(bact_bray_rare, samplebact_rare$combo_treat, p.method = "BH")
-  #bact_perm_rare_BH
-  
-# Perform the PERMANOVA to test effects of treatment on bacterial community composition  
-  #bact_perm_rare_graft <- vegan::adonis2(bact_bray_rare ~ graft_stage, data = samplebact_rare)
-  #bact_perm_rare_graft
+  bact.perm.rare.bee <- vegan::adonis2(bact.bray.rare.bee ~ temp_treat, data = sample.bact.rare.bee)
+  bact.perm.rare.bee
   
 # Set permutations to deal with graft stage
-  #perm_rare <- how(within = Within(type = "free"),
-                   #plots = Plots(type = "none"),
-                   #blocks = samplebact_rare$graft_stage,
-                   #observed = FALSE,
-                   #complete = FALSE)
+  perm.rare.bee <- how(within = Within(type = "free"),
+                       plots = Plots(type = "none"),
+                       blocks = sample.bact.rare$graft_stage,
+                       observed = FALSE,
+                       complete = FALSE)
   
 # Perform the PERMANOVA to test effects of developmental stage on bacterial community composition, dealing with graft stage
-  #bact_perm_rare_graft <- vegan::adonis2(bact_bray_rare ~ temp_treat, permutations = perm_rare, data = samplebact_rare)
-  #bact_perm_rare_graft
-  
-# Follow up with pairwise comparisons - which sample types differ?
-  #bact_perm_rare_BH <- RVAideMemoire::pairwise.perm.manova(bact_bray_rare, samplebact_rare$combo_treat, p.method = "BH")
-  #bact_perm_rare_BH
+  bact.perm.rare.bee.graft <- vegan::adonis2(bact.bray.rare.bee ~ temp_treat, permutations = perm.rare.bee, data = sample.bact.rare.bee)
+  bact.perm.rare.bee.graft
   
 ## Test for homogeneity of multivariate dispersion with rarefied data ----
   
+# Provisions with bees  
+  
 # Calculate the average distance of group members to the group centroid: combo_treat
-  #disp_bact_rare_combo <- vegan::betadisper(bact_bray_rare, samplebact_rare$combo_treat)
-  #disp_bact_rare_combo
+  disp.bact.rare.bee.combo <- vegan::betadisper(bact.bray.rare.bee, sample.bact.rare.bee$combo_treat)
+  disp.bact.rare.bee.combo
   
 # Do any of the group dispersions differ?
-  #disp_bact_an_rare <- stats::anova(disp_bact_rare_combo)
-  #disp_bact_an_rare
-  
-# Which group dispersions differ?
-  #disp_bact_ttest_rare_combo <- vegan::permutest(disp_bact_rare_combo, 
-                                                 #control = permControl(nperm = 999),
-                                                 #pairwise = TRUE)
-  #disp_bact_ttest_rare_combo
-  
-# Which group dispersions differ?
-  #disp_bact_tHSD_rare_combo <- stats::TukeyHSD(disp_bact_rare_combo)
-  #disp_bact_tHSD_rare_combo
+  disp.bact.an.rare.bee.combo <- stats::anova(disp.bact.rare.bee.combo)
+  disp.bact.an.rare.bee.combo
   
 ## Ordination with rarefied data ----
   
+# Provisions with bees  
+  
 # Calculate the relative abundance of each otu  
-  #ps.prop_rare <- phyloseq::transform_sample_counts(rareps_bact, function(otu) otu/sum(otu))
+  ps.prop.rare.bee <- phyloseq::transform_sample_counts(rareps.bact.bee, function(otu) otu/sum(otu))
   
 # PCoA using Bray-Curtis distance
-  #ord.pcoa.bray_rare <- phyloseq::ordinate(ps.prop_rare, method = "PCoA", distance = "bray")
+  ord.pcoa.bray.rare.bee <- phyloseq::ordinate(ps.prop.rare.bee, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.rare.bee)$combo_treat <- factor(sample_data(ps.prop.rare.bee)$combo_treat, levels = c("CN", "AN", "WN"))
   
 # Plot ordination
-  #OsmiaCC_PCoA_bact_rare <- plot_ordination(ps.prop_rare, ord.pcoa.bray_rare, color = "combo_treat", shape = "sample_type") + 
-                                #theme_bw() +
-                                #theme(legend.position = "none") +
-                                #theme(text = element_text(size = 16)) +
-                                #theme(legend.justification = "left", 
-                                      #legend.title = element_text(size = 16, colour = "black"), 
-                                      #legend.text = element_text(size = 14, colour = "black")) + 
-                                #geom_point(size = 3) +
-                                #scale_color_manual(values = c("#616161", "#9E9E9E", "#1565C0", "#64B5F6", "#C62828", "#E57373")) +
-                                #labs(title = "A", color = "Treatment", shape = "Sample Type")
-  #OsmiaCC_PCoA_bact_rare
+  OsmiaCC.PCoA.bact.rare.bee <- plot_ordination(ps.prop.rare.bee, ord.pcoa.bray.rare.bee, color = "combo_treat") + 
+                                    theme_bw() +
+                                    theme(legend.position = "none") +
+                                    theme(text = element_text(size = 16)) +
+                                    theme(panel.grid.major = element_blank(),
+                                          panel.grid.minor = element_blank()) +
+                                    theme(legend.justification = "left", 
+                                          legend.title = element_text(size = 16, colour = "black"), 
+                                          legend.text = element_text(size = 14, colour = "black")) + 
+                                    geom_point(size = 3) +
+                                    scale_color_manual(values = climate.colors) +
+                                    labs(title = "A",
+                                         color = "Treatment")
+  OsmiaCC.PCoA.bact.rare.bee
   
 ## Stacked community plot ----
   
 # Generate colorblind friendly palette
-  Okabe_Ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+  Okabe.Ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
   
 # Stretch palette (define more intermediate color options)
-  okabe_ext <- unikn::usecol(Okabe_Ito, n = 57)
-  colors <- sample(okabe_ext)
+  okabe.ext <- unikn::usecol(Okabe.Ito, n = 63)
+  colors <- sample(okabe.ext)
   
-# Provisions without bees
+# Control provisions
   
-# Sort data by Family
-  y15 <- phyloseq::tax_glom(ps5, taxrank = 'Family') # agglomerate taxa
-  y16 <- phyloseq::transform_sample_counts(y15, function(x) x/sum(x))
-  y16 <- phyloseq::psmelt(y16)
-  y16$Family <- as.character(y16$Family)
-  y16$Family[y16$Abundance < 0.01] <- "Family < 1% abund."
-  y16$Family <- as.factor(y16$Family)
-  head(y16)
+# Agglomerate taxa by Genus
+  y1 <- phyloseq::tax_glom(ps4, taxrank = 'Genus')
   
-# Plot treatment by Family
-  ggplot(data = y16, aes(x = combo_treat, y = Abundance, fill = Family)) + 
-    geom_bar(stat = "identity", position = "fill") + 
-    scale_fill_manual(values = colors) + 
-    theme(legend.position = "right") +
-    ylab("Relative abundance") + 
-    ylim(0, 1.0) +
-    xlab("Treatment") +
-    theme_bw() + 
-    theme(text = element_text(size = 16)) +
-    theme(panel.grid.major = element_blank(), 
-          panel.grid.minor = element_blank()) + 
-    theme(legend.justification = "left", 
-          legend.title = element_text(size = 16, colour = "black"), 
-          legend.text = element_text(size = 14, colour = "black")) + 
-    guides(fill = guide_legend(ncol = 1)) +
-    ggtitle("A")
-  
-# Sort data by Genus
-  y17 <- phyloseq::tax_glom(ps5, taxrank = 'Genus') # agglomerate taxa
-  y18 <- phyloseq::transform_sample_counts(y17, function(x) x/sum(x))
-  y18 <- phyloseq::psmelt(y18)
-  y18$Genus <- as.character(y18$Genus)
-  y18$Genus[y18$Abundance < 0.01] <- "Genus < 1% abund."
-  y18$Genus <- as.factor(y18$Genus)
-  head(y18)
-  
-# Plot treatment by Genus
-  ggplot(data = y18, aes(x = combo_treat, y = Abundance, fill = Genus)) + 
-    geom_bar(stat = "identity", position = "fill") + 
-    scale_fill_manual(values = colors) + 
-    theme(legend.position = "right") +
-    ylab("Relative abundance") + 
-    ylim(0, 1.0) +
-    xlab("Treatment") +
-    theme_bw() + 
-    theme(text = element_text(size = 16)) +
-    theme(panel.grid.major = element_blank(), 
-          panel.grid.minor = element_blank()) + 
-    theme(legend.justification = "left", 
-          legend.title = element_text(size = 16, colour = "black"), 
-          legend.text = element_text(size = 14, colour = "black")) + 
-    guides(fill = guide_legend(ncol = 1)) +
-    ggtitle("A")
-  
-# Provisions with bees  
-  
-# Sort data by Family
-  y1 <- phyloseq::tax_glom(ps6, taxrank = 'Family') # agglomerate taxa
+# Transform counts to relative abundances
   y2 <- phyloseq::transform_sample_counts(y1, function(x) x/sum(x))
+  
+# Convert to a ggplot2-friendly df
   y3 <- phyloseq::psmelt(y2)
-  y3$Family <- as.character(y3$Family)
-  y3$Family[y3$Abundance < 0.01] <- "Family < 1% abund."
-  y3$Family <- as.factor(y3$Family)
-  head(y3)
   
-# Remove provision from CS
-  y3 <- y3[y3$combo_treat != "CS", ]
+# Ensure Genus is a chr
+  y3$Genus <- as.character(y3$Genus)
   
-# Save relative abundance data
-  write.csv(y3, "OsmiaCC_Fam_bact_relabund.csv")
+# Group Genera with less that 1% abundance and rename
+  y3$Genus[y3$Abundance < 0.01] <- "Genera < 1% abund."
   
-# Reorder x-axis  
-  y3$combo_treat <- factor(y3$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+# Ensure Genus is a factor
+  y3$Genus <- as.factor(y3$Genus)
   
-# Plot treatment by Family
-  OsmiaCC_fam_relabund_bact <- ggplot(data = y3, aes(x = combo_treat, y = Abundance, fill = Family)) + 
+# Plot Genus by sample type 
+  OsmiaCC.gen.bact.controls <- ggplot(data = y3, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                                   geom_bar(stat = "identity", position = "fill") + 
                                   scale_fill_manual(values = colors) + 
+                                  facet_grid(~ sample_type, 
+                                             scale = "free", 
+                                             space = "free") +
                                   theme(legend.position = "right") +
                                   ylab("Relative abundance") + 
                                   ylim(0, 1.0) +
-                                  xlab("Treatment") +
+                                  xlab("Sample Type") +
                                   theme_bw() + 
                                   theme(text = element_text(size = 16)) +
-                                  theme(panel.grid.major = element_blank(), 
-                                        panel.grid.minor = element_blank()) + 
+                                  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
                                   theme(legend.justification = "left", 
-                                        legend.title = element_text(size = 16, colour = "black"), 
-                                        legend.text = element_text(size = 14, colour = "black")) + 
-                                  guides(fill = guide_legend(ncol = 2)) +
-                                  ggtitle("A")
-  OsmiaCC_fam_relabund_bact
-  
-# Plot Family for each sample
-  ggplot(data = y3, aes(x = sampleID, y = Abundance, fill = Family)) + 
-    geom_bar(stat = "identity", position = "fill") + 
-    scale_fill_manual(values = colors) +
-    theme(legend.position = "right") +
-    ylab("Relative abundance") + 
-    ylim(0, 1.0) +
-    xlab("Sample ID") +
-    theme_bw() + 
-    theme(text = element_text(size = 16)) +
-    theme(panel.grid.major = element_blank(), 
-          panel.grid.minor = element_blank()) + 
-    theme(legend.justification = "left", 
-          legend.title = element_text(size = 16, colour = "black"), 
-          legend.text = element_text(size = 14, colour = "black")) + 
-    guides(fill = guide_legend(ncol = 2)) +
-    ggtitle("Bacteria")
+                                        legend.title = element_text(size = 14, colour = "black"), 
+                                        legend.text = element_text(size = 7, colour = "black")) + 
+                                  guides(fill = guide_legend(ncol = 1)) +
+                                  labs(fill = "Genera") +
+                                  ggtitle("Bacteria")
+  OsmiaCC.gen.bact.controls
 
-# Sort data by Genus
-  y4 <- phyloseq::tax_glom(ps6, taxrank = 'Genus') # agglomerate taxa
+# Provisions without bees
+  
+# Agglomerate taxa by Genus
+  y4 <- phyloseq::tax_glom(ps5, taxrank = 'Genus')
+  
+# Transform counts to relative abundances
   y5 <- phyloseq::transform_sample_counts(y4, function(x) x/sum(x))
-  y5 <- phyloseq::prune_samples(sample_sums(y5) != 0, y5)
+  
+# Convert to a ggplot2-friendly df
   y6 <- phyloseq::psmelt(y5)
+  
+# Ensure Genus is a chr
   y6$Genus <- as.character(y6$Genus)
-  y6$Genus[y6$Abundance < 0.01] <- "Genera < 1% abund."
+  
+# Group Genera with less that 1% abundance and rename
+  y6$Genus[y6$Abundance < 0.01] <- "Genus < 1% abund."
+  
+# Ensure Genus is a factor
   y6$Genus <- as.factor(y6$Genus)
-  head(y6)
-  
-# Save relative abundance data
-  write.csv(y6, "OsmiaCC_Gen_bact_relabund.csv")
-  
-# Remove sample from CS  
-  y6 <- y6[y6$combo_treat != "CS", ]
   
 # Reorder x-axis  
-  y6$combo_treat <- factor(y6$combo_treat,levels = c("CS", "CN", "AN", "WN"))
+  y6$combo_treat <- factor(y6$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
-# Plot Genus by treatment
-  OsmiaCC_gen_type_bact <- ggplot(data = y6, aes(x = combo_treat, y = Abundance, fill = Genus)) + 
+# Plot treatment by Genus
+  OsmiaCC.gen.bact.NoBee <- ggplot(data = y6, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity", position = "fill") + 
-                              facet_grid(~ sex, 
+                              scale_fill_manual(values = colors) +
+                              facet_grid(~ combo_treat, 
                                          scale = "free", 
                                          space = "free") +
-                              scale_fill_manual(values = colors) +
                               theme(legend.position = "right") +
                               ylab("Relative abundance") + 
                               ylim(0, 1.0) +
@@ -884,16 +1051,69 @@
                               theme(legend.justification = "left", 
                                     legend.title = element_text(size = 16, colour = "black"), 
                                     legend.text = element_text(size = 14, colour = "black")) + 
-                              guides(fill = guide_legend(ncol = 2)) +
+                              guides(fill = guide_legend(ncol = 1)) +
+                              labs(fill = "Genera") +
                               ggtitle("A")
-  OsmiaCC_gen_type_bact
+  OsmiaCC.gen.bact.NoBee
   
-# Subset by sex
-  y6_males <- y6[y6$sex == "M", ]
-  y6_females <- y6[y6$sex == "F", ]
+# Provisions with bees
+
+# Agglomerate taxa by Genus
+  y7 <- phyloseq::tax_glom(ps6, taxrank = 'Genus')
+  
+# Transform counts to relative abundances
+  y8 <- phyloseq::transform_sample_counts(y7, function(x) x/sum(x))
+  
+# Remove samples that have 0 reads
+  y8 <- phyloseq::prune_samples(sample_sums(y8) != 0, y8)
+  
+# Convert to a ggplot2-friendly df
+  y9 <- phyloseq::psmelt(y8)
+  
+# Ensure Genus is a chr
+  y9$Genus <- as.character(y9$Genus)
+  
+# Group Genera with less that 1% abundance and rename
+  y9$Genus[y9$Abundance < 0.01] <- "Genera < 1% abund."
+  
+# Ensure Genus is a factor
+  y9$Genus <- as.factor(y9$Genus)
+  
+# Remove sample from CS  
+  y9 <- y9[y9$combo_treat != "CS", ]
+  
+# Reorder x-axis  
+  y9$combo_treat <- factor(y9$combo_treat,levels = c("CS", "CN", "AN", "WN"))
+  
+# Plot Genus by treatment
+  OsmiaCC.gen.type.bact.MF <- ggplot(data = y9, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+                                geom_bar(stat = "identity", position = "fill") + 
+                                facet_grid(~ combo_treat, 
+                                           scale = "free", 
+                                           space = "free") +
+                                scale_fill_manual(values = colors) +
+                                theme(legend.position = "right") +
+                                ylab("Relative abundance") + 
+                                ylim(0, 1.0) +
+                                xlab("Treatment") +
+                                theme_bw() + 
+                                theme(text = element_text(size = 16)) +
+                                theme(panel.grid.major = element_blank(), 
+                                      panel.grid.minor = element_blank()) + 
+                                theme(legend.justification = "left", 
+                                      legend.title = element_text(size = 16, colour = "black"), 
+                                      legend.text = element_text(size = 14, colour = "black")) + 
+                                guides(fill = guide_legend(ncol = 3)) +
+                                labs(fill = "Genera") +
+                                ggtitle("A")
+  OsmiaCC.gen.type.bact.MF
+  
+# Subset data by sex
+  y9.M <- y9[y9$sex == "M", ]
+  y9.F <- y9[y9$sex == "F", ]
   
 # Plot Genus for each sample - males
-  OsmiaCC_gen_ID_bact_M <- ggplot(data = y6_males, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.ID.bact.M <- ggplot(data = y9.M, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity",
                                        position = "fill") + 
                               facet_grid(~ combo_treat, 
@@ -913,13 +1133,12 @@
                                     legend.text = element_text(size = 14, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               guides(fill = guide_legend(ncol = 2)) +
+                              labs(fill = "Genera") +
                               ggtitle("A")
-  OsmiaCC_gen_ID_bact_M
-  
-  ggsave("OsmiaCC_16Sgenera_males.png", plot = OsmiaCC_gen_ID_bact_M, width = 15, height = 10, unit = "in")
-  
+  OsmiaCC.gen.ID.bact.M
+
 # Plot Genus for each sample - females  
-  OsmiaCC_gen_ID_bact_F <- ggplot(data = y6_females, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.ID.bact.F <- ggplot(data = y9.F, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity",
                                        position = "fill") + 
                               facet_grid(~ combo_treat, 
@@ -939,52 +1158,29 @@
                                     legend.text = element_text(size = 14, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               guides(fill = guide_legend(ncol = 2)) +
+                              labs(fill = "Genera") +
                               ggtitle("A")
-  OsmiaCC_gen_ID_bact_F
-  
-  ggsave("OsmiaCC_16Sgenera_females.png", plot = OsmiaCC_gen_ID_bact_F, width = 15, height = 10, unit = "in")
-  
-# Abundances
-  
-# Agglomerate taxa
-  
-  bact_gen <- phyloseq::tax_glom(ps6, taxrank = 'Genus')
-  bact_gen <- phyloseq::transform_sample_counts(bact_gen, function(x) x/sum(x))
-  bact_gen <- phyloseq::prune_samples(sample_sums(bact_gen) != 0, bact_gen)
-  write.csv(tax_table(bact_gen), "OsmiaCC_bact_gen_taxa.csv")
-  write.csv(otu_table(bact_gen), "OsmiaCC_bact_gen_otu.csv")
-  
-  #bact_abund <- read.csv("OsmiaCC_bact_abundance.csv")
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+  OsmiaCC.gen.ID.bact.F
   
 ## Differential abundance with raw data ----
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
   
 # Convert from a phyloseq to a deseq obj
-  desq_obj_rare <- phyloseq::phyloseq_to_deseq2(rareps_bact, ~ combo_treat)
+  desq.obj.bee <- phyloseq::phyloseq_to_deseq2(rareps.bact.bee, ~ combo_treat)
   
 # Calculate the geometric mean and remove rows with NA
-  gm_mean <- function(x, na.rm = TRUE) {
+  gm.mean <- function(x, na.rm = TRUE) {
     exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
   }
   
 # Add a count of 1 to all geometric means
-  geoMeans <- apply(counts(desq_obj_rare), 1, gm_mean)
+  geoMeans <- apply(counts(desq.obj.bee), 1, gm.mean)
   
 # Estimate size factors
-  desq_dds_rare <- DESeq2::estimateSizeFactors(desq_obj_rare, geoMeans = geoMeans)
+  desq.dds.rare.bee <- DESeq2::estimateSizeFactors(desq.obj.bee, geoMeans = geoMeans)
   
 # Fit a local regression
-  desq_dds_rare <- DESeq2::DESeq(desq_dds_rare, fitType = "local")
+  desq.dds.rare.bee <- DESeq2::DESeq(desq.dds.rare.bee, fitType = "local")
   
 # Set significance factor  
   alpha <- 0.05
@@ -992,42 +1188,54 @@
 # WN vs AN
   
 # Extract results from differential abundance table for initial vs final provision
-  WN_AN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "WN", "AN"))
+  WN.AN.rare.bee <- DESeq2::results(desq.dds.rare.bee, contrast = c("combo_treat", "WN", "AN"))
   
 # Order differential abundances by their padj value
-  WN_AN_rare <- WN_AN_rare[order(WN_AN_rare$padj, na.last = NA), ]
+  WN.AN.rare.bee <- WN.AN.rare.bee[order(WN.AN.rare.bee$padj, na.last = NA), ]
   
 # Filter data to only include padj < alpha and remove NAs
-  WN_AN_rare_p05 <- WN_AN_rare[(WN_AN_rare$padj < alpha & !is.na(WN_AN_rare$padj)), ]
+  WN.AN.rare.bee_p05 <- WN.AN.rare.bee[(WN.AN.rare.bee$padj < alpha & !is.na(WN.AN.rare.bee$padj)), ]
   
 # Check to see if any padj is below alpha
-  WN_AN_rare_p05
+  WN.AN.rare.bee_p05
   
 # AN vs CN
   
 # Extract results from differential abundance table for initial vs final provision
-  AN_CN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "AN", "CN"))
+  AN.CN.rare.bee <- DESeq2::results(desq.dds.rare.bee, contrast = c("combo_treat", "AN", "CN"))
   
 # Order differential abundances by their padj value
-  AN_CN_rare <- AN_CN_rare[order(AN_CN_rare$padj, na.last = NA), ]
+  AN.CN.rare.bee <- AN.CN.rare.bee[order(AN.CN.rare.bee$padj, na.last = NA), ]
   
 # Filter data to only include padj < alpha and remove NAs
-  AN_CN_rare_p05 <- AN_CN_rare[(AN_CN_rare$padj < alpha & !is.na(AN_CN_rare$padj)), ]
+  AN.CN.rare.bee_p05 <- AN.CN.rare.bee[(AN.CN.rare.bee$padj < alpha & !is.na(AN.CN.rare.bee$padj)), ]
   
 # Check to see if any padj is below alpha
-  AN_CN_rare_p05
+  AN.CN.rare.bee_p05
   
 # WN vs CN
 
 # Extract results from differential abundance table for initial vs final provision
-  WN_CN_rare <- DESeq2::results(desq_dds_rare, contrast = c("combo_treat", "WN", "CN"))
+  WN.CN.rare.bee <- DESeq2::results(desq.dds.rare.bee, contrast = c("combo_treat", "WN", "CN"))
 
 # Order differential abundances by their padj value
-  WN_CN_rare <- WN_CN_rare[order(WN_CN_rare$padj, na.last = NA), ]
+  WN.CN.rare.bee <- WN.CN.rare.bee[order(WN.CN.rare.bee$padj, na.last = NA), ]
   
 # Filter data to only include padj < alpha and remove NAs
-  WN_CN_rare_p05 <- WN_CN_rare[(WN_CN_rare$padj < alpha & !is.na(WN_CN_rare$padj)), ]
+  WN.CN.rare.bee_p05 <- WN.CN.rare.bee[(WN.CN.rare.bee$padj < alpha & !is.na(WN.CN.rare.bee$padj)), ]
   
 # Check to see if any padj is below alpha
-  WN_CN_rare_p05
+  WN.CN.rare.bee_p05
+  
+# Abundances ----
+  
+# Agglomerate taxa
+  
+  #bact.gen <- phyloseq::tax_glom(ps6, taxrank = 'Genus')
+  #bact.gen <- phyloseq::transform_sample_counts(bact.gen, function(x) x/sum(x))
+  #bact.gen <- phyloseq::prune_samples(sample_sums(bact.gen) != 0, bact.gen)
+  #write.csv(tax_table(bact.gen), "OsmiaCC_bact_gen_taxa.csv")
+  #write.csv(otu_table(bact.gen), "OsmiaCC_bact_gen_otu.csv")
+  
+  #bact.abund <- read.csv("OsmiaCC_bact_abundance.csv")  
   

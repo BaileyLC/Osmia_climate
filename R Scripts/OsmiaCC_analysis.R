@@ -914,6 +914,20 @@
   aftm.M.warm <- 1 - aftm.M.warm
   aftm.M.warm
   
+# Obtain proportional hazards
+  aftm.M.ph <- -coef(aftm.M)/aftm.M$scale
+  aftm.M.ph
+  
+# Calculate hazard ratios
+  aftm.M.ph.cool <- exp(0.07359515)
+  aftm.M.ph.cool
+  
+  aftm.M.ph.warm <- exp(0.30519354)
+  aftm.M.ph.warm
+  
+  aftm.M.ph.natural <- exp(0.08189382)
+  aftm.M.ph.natural  
+  
 # Kaplan-Meier with all male bees
   OsmiaCC.KP.all.M <- ggsurvfit(s2) +
                         theme_classic() +
@@ -1028,6 +1042,20 @@
   aftm.M.48.warm <- exp(1)^-0.2099
   aftm.M.48.warm <- 1 - aftm.M.48.warm
   aftm.M.48.warm
+  
+# Obtain proportional hazards
+  aftm.M.48.ph <- -coef(aftm.M.48)/aftm.M.48$scale
+  aftm.M.48.ph
+  
+# Calculate hazard ratios
+  aftm.M.48.ph.cool <- exp(0.19494894)
+  aftm.M.48.ph.cool
+  
+  aftm.M.48.ph.warm <- exp(0.30287441)
+  aftm.M.48.ph.warm
+  
+  aftm.M.48.ph.sterile <- exp(0.08838406)
+  aftm.M.48.ph.sterile
   
 # Kaplan-Meier without bees that died within 48 h of grafting
   OsmiaCC.KP.M.48 <- ggsurvfit(s3) +

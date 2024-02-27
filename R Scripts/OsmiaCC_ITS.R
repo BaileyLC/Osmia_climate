@@ -45,18 +45,18 @@
 # Import data
   seqtab.nochim1 <- readRDS("OsmiaCC_seqsITS_run1.rds")
   taxa1 <- readRDS("OsmiaCC_taxaITS_run1.rds")
-  metaITS_CC_run1 <- read.csv("OsmiaCC_master - ITS_run1.csv")
+  metaITS.CC.run1 <- read.csv("OsmiaCC_master - ITS_run1.csv")
   
   seqtab.nochim2 <- readRDS("OsmiaCC_seqsITS_run2.rds")
   taxa2 <- readRDS("OsmiaCC_taxaITS_run2.rds")
-  metaITS_CC_run2 <- read.csv("OsmiaCC_master - ITS_run2.csv")
+  metaITS.CC.run2 <- read.csv("OsmiaCC_master - ITS_run2.csv")
 
 ## Create phyloseq objects for each ITS run ----
 
 # Re-create your df
   samples.out1 <- rownames(seqtab.nochim1)
   samples.out1 <- stringr::str_sort(samples.out1, numeric = TRUE)
-  samples1 <- data.frame(metaITS_CC_run1)
+  samples1 <- data.frame(metaITS.CC.run1)
   extractionID <- samples1$extractionID
   sample_type <- samples1$sample_type
   sampleID <- samples1$sampleID
@@ -68,7 +68,7 @@
   graft_stage <- samples1$graft_stage
   DNA_conc <- samples1$DNA_conc
   sampleinfo1 <- data.frame(extractionID = extractionID, 
-                            sample_type = sample_type, 
+                            sample_type = sample_type,
                             sampleID = sampleID,  
                             temp_treat = temp_treat, 
                             micro_treat = micro_treat, 
@@ -86,7 +86,7 @@
 # Re-create your df
   samples.out2 <- rownames(seqtab.nochim2)
   samples.out2 <- stringr::str_sort(samples.out2, numeric = TRUE)
-  samples2 <- data.frame(metaITS_CC_run2)
+  samples2 <- data.frame(metaITS.CC.run2)
   extractionID <- samples2$extractionID
   sample_type <- samples2$sample_type
   sampleID <- samples2$sampleID
@@ -328,7 +328,7 @@
   
 # Provisions without bees  
   
-# Calculate species richness
+# Estimate richness and alpha diversity
   fung.rich.NoBee <- phyloseq::estimate_richness(ps6, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
   
 # Build df with metadata
@@ -350,6 +350,13 @@
   
 # Post-hoc test
   TukeyHSD(mod14)
+  
+# Save p-values  
+  stats.mod14 <- tibble::tribble(
+                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                   "WN",     "CN",    0.036,      "*"
+                               )
+  stats.mod14
   
 # Examine the effect of temperature on Simpson diversity
   mod15 <- aov(Simpson ~ temp_treat, data = fung.rich.NoBee)
@@ -373,9 +380,14 @@
                                   scale_color_manual(name = "Treatment", 
                                                     values = climate.colors,
                                                     labels = climate.labs) +
-                                  labs(title = "A") + 
+                                  labs(title = "B") + 
                                   xlab("Treatment") +
-                                  ylab("Shannon index")
+                                  ylab("Shannon index") +
+                                  ylim(0, 4) +
+                                  ggpubr::stat_pvalue_manual(stats.mod14,
+                                                             label = "p.adj.signif",
+                                                             y.position = 3,
+                                                             tip.length = 0.01)
   OsmiaCC.Shannon.fung.NoBee
   
 # Boxplot of Simpson index
@@ -409,7 +421,7 @@
   
 # Provisions with bees  
   
-# Calculate species richness
+# Estimate richness and alpha diversity
   fung.rich.bee <- phyloseq::estimate_richness(ps7, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
   
 # Build df with metadata
@@ -448,6 +460,9 @@
   
 # Post-hoc tests
   emmeans(mod19, pairwise ~ micro_treat, adjust = "tukey")
+  
+# Reorder x-axis
+  fung.rich.bee$combo_treat <- factor(fung.rich.bee$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Boxplot of Shannon index
   OsmiaCC.Shannon.fung.bee <- ggplot(fung.rich.bee, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
@@ -516,21 +531,48 @@
   stats::anova(mod20)
   
 # Post-hoc test  
-  emmeans(mod20, pairwise ~ micro_treat, adjust = "tukey")
+  emmeans(mod20, pairwise ~ micro_treat | temp_treat, adjust = "tukey")
+  
+# Save p-values  
+  stats.mod20 <- tibble::tribble(
+                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                   "CS",     "CN",    0.0001,      "***",
+                                   "AS",     "AN",    0.0001,      "***",
+                                   "WS",     "WN",    0.0001,      "***"
+                              )
+  stats.mod20
   
 # Examine the effect of temperature and microbiome treatment on Simpson diversity, with graft stage as a random effect
   mod21 <- nlme::lme(Simpson ~ temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee.M)
   stats::anova(mod21)
   
 # Post-hoc test  
-  emmeans(mod21, pairwise ~ micro_treat, adjust = "tukey")
+  emmeans(mod21, pairwise ~ micro_treat | temp_treat, adjust = "tukey")
+  
+# Save p-values  
+  stats.mod21 <- tibble::tribble(
+                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                   "CS",     "CN",    0.0001,      "***",
+                                   "AS",     "AN",    0.0001,      "***",
+                                   "WS",     "WN",    0.0001,      "***"
+                              )
+  stats.mod21  
   
 # Examine the effect of temperature and microbiome treatment on Observed richness, with graft stage as a random effect
   mod22 <- nlme::lme(Observed ~ temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee.M)
   stats::anova(mod22)
   
 # Post-hoc test  
-  emmeans(mod22, pairwise ~ micro_treat, adjust = "tukey")
+  emmeans(mod22, pairwise ~ micro_treat | temp_treat, adjust = "tukey")
+  
+# Save p-values  
+  stats.mod22 <- tibble::tribble(
+                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                   "CS",     "CN",    0.040,      "*",
+                                   "AS",     "AN",    0.040,      "*",
+                                   "WS",     "WN",    0.040,      "*"
+                              )
+  stats.mod22
   
 # Reorder x-axis
   fung.rich.bee.M$combo_treat <- factor(fung.rich.bee.M$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -546,9 +588,14 @@
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") +
+                                    labs(title = "B") +
                                     xlab("Treatment") +
-                                    ylab("Shannon index")
+                                    ylab("Shannon index") +
+                                    ylim(0, 4) + 
+                                    ggpubr::stat_pvalue_manual(stats.mod20,
+                                                               label = "p.adj.signif",
+                                                               y.position = 3.5,
+                                                               tip.length = 0.01)
   OsmiaCC.Shannon.fung.bee.M
   
 # Boxplot of Simpson index
@@ -562,9 +609,14 @@
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") + 
+                                    labs(title = "B") + 
                                     xlab("Treatment") +
-                                    ylab("Simpson index")
+                                    ylab("Simpson index") +
+                                    ylim(0, 1.0) +
+                                    ggpubr::stat_pvalue_manual(stats.mod21,
+                                                               label = "p.adj.signif",
+                                                               y.position = 0.95,
+                                                               tip.length = 0.01)
   OsmiaCC.Simpson.bact.bee.M
   
 # Boxplot of Observed richness
@@ -578,9 +630,14 @@
                                     scale_color_manual(name = "Treatment",
                                                        values = climate.colors,
                                                        labels = climate.labs) +
+                                    labs("B") +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
-                                    ggtitle("A")
+                                    ylim(0, 70) +
+                                    ggpubr::stat_pvalue_manual(stats.mod22,
+                                                               label = "p.adj.signif",
+                                                               y.position = 65,
+                                                               tip.length = 0.01)
   OsmiaCC.Observed.bact.bee.M
   
 # Provisions with bees - females
@@ -1145,7 +1202,7 @@
                                   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                                   guides(fill = guide_legend(ncol = 1)) +
                                   labs(fill = "Genera") +
-                                  ggtitle("Fungi")
+                                  ggtitle("B")
   OsmiaCC.gen.fung.controls
   
 # Provisions without bees
@@ -1192,7 +1249,7 @@
                                 guides(fill = guide_legend(ncol = 1)) +
                                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                                 labs(fill = "Genera") +
-                                ggtitle("A")
+                                ggtitle("B")
   OsmiaCC.gen.fung.NoBee
   
 # Provisions with bees
@@ -1239,7 +1296,7 @@
                                 guides(fill = guide_legend(ncol = 3)) +
                                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                                 labs(fill = "Genera") +
-                                ggtitle("A")
+                                ggtitle("B")
   OsmiaCC.gen.type.fung.MF
   
 # Subset data by sex
@@ -1268,7 +1325,7 @@
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               guides(fill = guide_legend(ncol = 2)) +
                               labs(fill = "Genera") +
-                              ggtitle("A")
+                              ggtitle("B")
   OsmiaCC.gen.ID.fung.M
   
 # Plot Genus for each sample - females  
@@ -1293,7 +1350,7 @@
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               guides(fill = guide_legend(ncol = 2)) +
                               labs(fill = "Genera") +
-                              ggtitle("A")
+                              ggtitle("B")
   OsmiaCC.gen.ID.fung.F
   
 ## Differential abundance with rarefied data ----
@@ -1302,7 +1359,7 @@
 # Provisions with bees  
   
 # Convert from a phyloseq to a deseq obj
-  desq.obj.fung.bee <- phyloseq::phyloseq_to_deseq2(ps7, ~ combo_treat)
+  desq.obj.fung.rare.bee <- phyloseq::phyloseq_to_deseq2(ps7, ~ combo_treat)
   
 # Calculate the geometric mean and remove rows with NA
   gm.mean <- function(x, na.rm = TRUE) {
@@ -1310,10 +1367,10 @@
   }
   
 # Add a count of 1 to all geometric means 
-  geoMeans <- apply(counts(desq.obj.fung.bee), 1, gm.mean)
+  geoMeans <- apply(counts(desq.obj.fung.rare.bee), 1, gm.mean)
   
 # Estimate size factors
-  desq.dds.fung.rare.bee <- estimateSizeFactors(desq.obj.fung.bee, geoMeans = geoMeans)
+  desq.dds.fung.rare.bee <- estimateSizeFactors(desq.obj.fung.rare.bee, geoMeans = geoMeans)
   
 # Fit a local regression
   desq.dds.fung.rare.bee <- DESeq(desq.dds.fung.rare.bee, fitType = "local")

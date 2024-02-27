@@ -269,6 +269,11 @@
   OsmiaCC.stacked.bee.F <- OsmiaCC.gen.bact.bee.F + OsmiaCC.gen.fung.bee.F + plot_layout(ncol = 1, nrow = 2)
   OsmiaCC.stacked.bee.F
   
-  # Save plot
+# Save plot
   ggsave("OsmiaCC_stacked_bee_F.png", plot = OsmiaCC.stacked.bee.F, width = 18, height = 12, units = "in")
+  
+### Arsenophonus ----
+  
+# Save plot
+  ggsave("OsmiaCC_Arsenophonus_rel_abund.png", plot = arseno.rel.abund, width = 5, height = 3, units = "in")
   

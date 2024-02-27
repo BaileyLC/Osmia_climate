@@ -13,6 +13,53 @@
   library(ggplot2) # Version 3.4.3
   library(patchwork) # Version 1.1.3
 
+### Treatments ----
+
+# Save plot
+  ggsave("OsmiaCC_treatments.png", plot = treats, width = 10, height = 4, units = "in")
+
+### Bee health and development ----
+
+## Male bees
+
+# Create plot
+  OsmiaCC.fitness.M <- bm.M + fat.M + dur.M + plot_layout(ncol = 3)
+  OsmiaCC.fitness.M
+
+# Save plot  
+  ggsave("OsmiaCC_fitness_M.png", plot = OsmiaCC.fitness.M, width = 15, height = 6, unit = "in")
+  
+## Female bees
+  
+# Create plot
+  OsmiaCC.fitness.F <- bm.F + fat.F + dur.F + plot_layout(ncol = 3)
+  OsmiaCC.fitness.F
+  
+# Save plot
+  ggsave("OsmiaCC_fitness_F.png", plot = OsmiaCC.fitness.F, width = 15, height = 6, unit = "in")
+  
+### Kaplan-Meier ----
+  
+## All male bees
+  
+# Save plot
+  ggsave("OsmiaCC_KP_all_M.png", plot = OsmiaCC.KP.all.M, width = 6, height = 4, unit = "in")
+
+## Only male bees that did not die within 48 h
+  
+# Save plot
+  ggsave("OsmiaCC_KP_M_48.png", plot = OsmiaCC.KP.M.48, width = 6, height = 4, unit = "in")
+  
+## All female bees
+  
+# Save plot
+  ggsave("OsmiaCC_KP_all_F.png", plot = OsmiaCC.KP.all.F, width = 6, height = 4, unit = "in")
+
+## Only female bees that did not die within 48 h
+  
+# Save plot
+  ggsave("OsmiaCC_KP_F_48.png", plot = OsmiaCC.KP.F.48, width = 6, height = 4, unit = "in")
+  
 ### Shannon Index ----
 
 ## Provisions without bees

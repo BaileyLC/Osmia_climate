@@ -28,6 +28,9 @@
   library(unikn) # Version 0.9.0
   library(DESeq2) # Version 1.40.2
 
+# Italicize title
+  bact.title <- expression(paste("(", italic("a"), ")"))
+
 # Set color scheme
   climate.colors <- c("CS" = "#64B5F6",
                       "CN" = "#1565C0",
@@ -43,7 +46,8 @@
                     "AN" = "Ambient: Natural",
                     "WS" = "Warm: Sterile",
                     "WN" = "Warm: Natural")
-# Import data
+
+## Import data
   seqtab.nochim <- readRDS("OsmiaCC_seqs16Sall.rds")
   taxa <- readRDS("OsmiaCC_taxa16Sall.rds")
   meta16S.CC <- read.csv("OsmiaCC_master - 16S_worked.csv")
@@ -364,15 +368,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") +
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
-                                    ylab("Shannon index")
+                                    ylab("Shannon index") +
+                                    ylim(0, 4)
   OsmiaCC.Shannon.bact.NoBee
   
 # Boxplot of Simpson index
@@ -380,15 +386,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") + 
+                                    labs(title = bact.title) + 
                                     xlab("Treatment") +
-                                    ylab("Simpson index")
+                                    ylab("Simpson index") +
+                                    ylim(0, 1.0)
   OsmiaCC.Simpson.bact.NoBee
   
 # Boxplot of Observed richness
@@ -396,15 +404,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment",
                                                        values = climate.colors,
                                                        labels = climate.labs) +
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
-                                    ggtitle("A")
+                                    ylim(0, 25)
   OsmiaCC.Observed.bact.NoBee
 
 # Provisions with bees    
@@ -456,15 +466,17 @@
                                   facet_grid(~ sex, 
                                              scale = "free", 
                                              space = "free") +
-                                  theme(legend.position = "none") +
+                                  theme(legend.position = "none",
+                                        plot.title = element_text(hjust = -0.12)) +
                                   theme(panel.grid.major = element_blank(),
                                         panel.grid.minor = element_blank()) +
                                   scale_color_manual(name = "Treatment", 
                                                      values = climate.colors,
                                                      labels = climate.labs) +
-                                  labs(title = "A") +
+                                  labs(title = bact.title) +
                                   xlab("Treatment") +
-                                  ylab("Shannon index")
+                                  ylab("Shannon index") +
+                                  ylim(0, 3)
   OsmiaCC.Shannon.bact.bee
   
 # Boxplot of Simpson index
@@ -475,15 +487,17 @@
                                   facet_grid(~ sex, 
                                              scale = "free", 
                                              space = "free") +
-                                  theme(legend.position = "none") +
+                                  theme(legend.position = "none",
+                                        plot.title = element_text(hjust = -0.12)) +
                                   theme(panel.grid.major = element_blank(),
                                         panel.grid.minor = element_blank()) +
                                   scale_color_manual(name = "Treatment", 
                                                      values = climate.colors,
                                                      labels = climate.labs) +
-                                  labs(title = "A") + 
+                                  labs(title = bact.title) + 
                                   xlab("Treatment") +
-                                  ylab("Simpson index")
+                                  ylab("Simpson index") +
+                                  ylim(0, 1.0)
   OsmiaCC.Simpson.bact.bee
   
 # Boxplot of Observed richness
@@ -494,15 +508,17 @@
                                     facet_grid(~ sex, 
                                                scale = "free", 
                                                space = "free") +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment",
                                                        values = climate.colors,
                                                        labels = climate.labs) +
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
-                                    ggtitle("A")
+                                    ylim(0, 70)
   OsmiaCC.Observed.bact.bee
   
 # Provisions with bees - males
@@ -540,15 +556,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") +
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
-                                    ylab("Shannon index")
+                                    ylab("Shannon index") +
+                                    ylim(0, 4)
   OsmiaCC.Shannon.bact.bee.M
   
 # Boxplot of Simpson index
@@ -556,15 +574,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") + 
+                                    labs(title = bact.title) + 
                                     xlab("Treatment") +
-                                    ylab("Simpson index")
+                                    ylab("Simpson index") +
+                                    ylim(0, 1.0)
   OsmiaCC.Simpson.bact.bee.M
   
 # Boxplot of Observed richness
@@ -572,7 +592,8 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment",
@@ -580,8 +601,8 @@
                                                        labels = climate.labs) +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
-                                    ylim(0, 45) +
-                                    ggtitle("A") +
+                                    ylim(0, 70) +
+                                    labs(title = bact.title) +
                                     ggpubr::stat_pvalue_manual(stats.mod9,
                                                                label = "p.adj.signif",
                                                                y.position = 40,
@@ -613,15 +634,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") +
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
-                                    ylab("Shannon index")
+                                    ylab("Shannon index") +
+                                    ylim(0, 3.0)
   OsmiaCC.Shannon.bact.bee.F
   
 # Boxplot of Simpson index
@@ -629,15 +652,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = "A") + 
+                                    labs(title = bact.title) + 
                                     xlab("Treatment") +
-                                    ylab("Simpson index")
+                                    ylab("Simpson index") +
+                                    ylim(0, 1.0)
   OsmiaCC.Simpson.bact.bee.F
   
 # Boxplot of Observed richness
@@ -645,15 +670,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
                                     scale_color_manual(name = "Treatment",
                                                        values = climate.colors,
                                                        labels = climate.labs) +
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
-                                    ggtitle("A")
+                                    ylim(0, 50)
   OsmiaCC.Observed.bact.bee.F
 
 ## Evenness ----
@@ -684,22 +711,24 @@
   stats::anova(mod13)
   
 # Plot
-  OsmiaCC.Pielou.bact <- ggplot(bact.evenness, aes(x = combo_treat, y = pielou, color = combo_treat)) +
-                            geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
-                            geom_jitter(size = 1, alpha = 0.9) +
-                            theme_bw() +
-                            facet_grid(~ sex,
-                                       scale = "free", 
-                                       space = "free") +
-                            theme(legend.position = "none") +
-                            theme(panel.grid.major = element_blank(),
-                                  panel.grid.minor = element_blank()) +
-                            ylab("Pielou's Evenness") +
-                            ylim(0, 1.0) +
-                            xlab("Treatment") +
-                            scale_color_manual(values = climate.colors,
-                                               labels = climate.labs)
-  OsmiaCC.Pielou.bact
+  OsmiaCC.Pielou.bact.bee <- ggplot(bact.evenness, aes(x = combo_treat, y = pielou, color = combo_treat)) +
+                                geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                geom_jitter(size = 1, alpha = 0.9) +
+                                theme_bw() +
+                                facet_grid(~ sex,
+                                           scale = "free", 
+                                           space = "free") +
+                                theme(legend.position = "none",
+                                      plot.title = element_text(hjust = -0.12)) +
+                                theme(panel.grid.major = element_blank(),
+                                      panel.grid.minor = element_blank()) +
+                                labs(title = bact.title) +
+                                ylab("Pielou's Evenness") +
+                                ylim(0, 1.0) +
+                                xlab("Treatment") +
+                                scale_color_manual(values = climate.colors,
+                                                   labels = climate.labs)
+  OsmiaCC.Pielou.bact.bee
   
 ## Beta diversity with relative abundance data ----
   
@@ -838,7 +867,8 @@
 # Plot ordination
   OsmiaCC.PCoA.bact <- plot_ordination(ps.prop.bact, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
                           theme_bw() +
-                          theme(legend.position = "none") +
+                          theme(legend.position = "none",
+                                plot.title = element_text(hjust = -0.3)) +
                           theme(text = element_text(size = 16)) +
                           theme(panel.grid.major = element_blank(),
                                 panel.grid.minor = element_blank()) +
@@ -847,7 +877,7 @@
                                 legend.text = element_text(size = 14, colour = "black")) + 
                           geom_point(size = 3) +
                           scale_color_manual(values = climate.colors) +
-                          labs(title = "A",
+                          labs(title = bact.title,
                                color = "Treatment",
                                shape = "Sample Type")
   OsmiaCC.PCoA.bact
@@ -863,7 +893,8 @@
 # Plot ordination
   OsmiaCC.PCoA.bact.NoBee <- plot_ordination(ps.prop.bact.NoBee, ord.pcoa.bray.NoBee, color = "combo_treat") + 
                                 theme_bw() +
-                                theme(legend.position = "none") +
+                                theme(legend.position = "none",
+                                      plot.title = element_text(hjust = -0.25)) +
                                 theme(text = element_text(size = 16)) +
                                 theme(panel.grid.major = element_blank(),
                                       panel.grid.minor = element_blank()) +
@@ -872,7 +903,7 @@
                                       legend.text = element_text(size = 14, colour = "black")) + 
                                 geom_point(size = 3) +
                                 scale_color_manual(values = climate.colors) +
-                                labs(title = "A",
+                                labs(title = bact.title,
                                      color = "Treatment")
   OsmiaCC.PCoA.bact.NoBee
   
@@ -885,9 +916,10 @@
   sample_data(ps.prop.bact.bee)$combo_treat <- factor(sample_data(ps.prop.bact.bee)$combo_treat, levels = c("CN", "AN", "WN"))
   
 # Plot ordination
-  OsmiaCC.PCoA.bact.bee <- plot_ordination(ps.prop.bact.bee, ord.pcoa.bray.bee, color = "combo_treat") + 
+  OsmiaCC.PCoA.bact.bee <- plot_ordination(ps.prop.bact.bee, ord.pcoa.bray.bee, color = "combo_treat", shape = "sex") + 
                                 theme_bw() +
-                                theme(legend.position = "none") +
+                                theme(legend.position = "none",
+                                      plot.title = element_text(hjust = -0.25)) +
                                 theme(text = element_text(size = 16)) +
                                 theme(panel.grid.major = element_blank(),
                                       panel.grid.minor = element_blank()) +
@@ -896,9 +928,62 @@
                                       legend.text = element_text(size = 14, colour = "black")) + 
                                 geom_point(size = 3) +
                                 scale_color_manual(values = climate.colors) +
-                                labs(title = "A",
-                                     color = "Treatment")
+                                labs(title = bact.title,
+                                     color = "Treatment",
+                                     shape = "Sex")
   OsmiaCC.PCoA.bact.bee
+  
+# Subset males
+  ps.prop.bact.bee.M <- subset_samples(ps.prop.bact.bee, sex == "M")
+  
+# PCoA using Bray-Curtis distance
+  ord.pcoa.bray.bact.bee.M <- phyloseq::ordinate(ps.prop.bact.bee.M, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.bact.bee.M)$combo_treat <- factor(sample_data(ps.prop.bact.bee.M)$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot ordination
+  OsmiaCC.PCoA.bact.bee.M <- plot_ordination(ps.prop.bact.bee.M, ord.pcoa.bray.bact.bee.M, color = "combo_treat") + 
+                                theme_bw() +
+                                theme(legend.position = "none",
+                                      plot.title = element_text(hjust = -0.28)) +
+                                theme(panel.grid.major = element_blank(),
+                                      panel.grid.minor = element_blank()) +
+                                theme(text = element_text(size = 16)) +
+                                theme(legend.justification = "left", 
+                                      legend.title = element_text(size = 16, colour = "black"), 
+                                      legend.text = element_text(size = 14, colour = "black")) + 
+                                geom_point(size = 3) +
+                                scale_color_manual(values = climate.colors) +
+                                labs(title = bact.title,
+                                     color = "Treatment")
+  OsmiaCC.PCoA.bact.bee.M
+  
+# Subset females
+  ps.prop.bact.bee.F <- subset_samples(ps.prop.bact.bee, sex == "F")
+  
+# PCoA using Bray-Curtis distance
+  ord.pcoa.bray.bact.bee.F <- phyloseq::ordinate(ps.prop.bact.bee.F, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.bact.bee.F)$combo_treat <- factor(sample_data(ps.prop.bact.bee.F)$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot ordination
+  OsmiaCC.PCoA.bact.bee.F <- plot_ordination(ps.prop.bact.bee.F, ord.pcoa.bray.bact.bee.F, color = "combo_treat") + 
+                                theme_bw() +
+                                theme(legend.position = "none",
+                                      plot.title = element_text(hjust = -0.26)) +
+                                theme(panel.grid.major = element_blank(),
+                                      panel.grid.minor = element_blank()) +
+                                theme(text = element_text(size = 16)) +
+                                theme(legend.justification = "left", 
+                                      legend.title = element_text(size = 16, colour = "black"), 
+                                      legend.text = element_text(size = 14, colour = "black")) + 
+                                geom_point(size = 3) +
+                                scale_color_manual(values = climate.colors) +
+                                labs(title = bact.title,
+                                     color = "Treatment")
+  OsmiaCC.PCoA.bact.bee.F  
   
 ## Rarefaction ----
   
@@ -916,9 +1001,10 @@
   OsmiaCC.rare.bact.bee <- ggplot(rare.tidy.bact.bee, aes(x = Sample, y = Species, group = Site)) +
                               geom_line() +
                               theme_bw() +
+                              theme(plot.title = element_text(hjust = -0.07)) +
                               theme(panel.grid.major = element_blank(),
                                     panel.grid.minor = element_blank()) +
-                              labs(title = "A") + 
+                              labs(title = bact.title) + 
                               xlab("Number of reads") +
                               ylab("Number of species")
   OsmiaCC.rare.bact.bee
@@ -993,18 +1079,19 @@
 # Provisions with bees  
   
 # Calculate the relative abundance of each otu  
-  ps.prop.rare.bee <- phyloseq::transform_sample_counts(rareps.bact.bee, function(otu) otu/sum(otu))
+  ps.prop.bact.rare.bee <- phyloseq::transform_sample_counts(rareps.bact.bee, function(otu) otu/sum(otu))
   
 # PCoA using Bray-Curtis distance
-  ord.pcoa.bray.rare.bee <- phyloseq::ordinate(ps.prop.rare.bee, method = "PCoA", distance = "bray")
+  ord.pcoa.bray.rare.bee <- phyloseq::ordinate(ps.prop.bact.rare.bee, method = "PCoA", distance = "bray")
   
 # Order samples
-  sample_data(ps.prop.rare.bee)$combo_treat <- factor(sample_data(ps.prop.rare.bee)$combo_treat, levels = c("CN", "AN", "WN"))
+  sample_data(ps.prop.bact.rare.bee)$combo_treat <- factor(sample_data(ps.prop.bact.rare.bee)$combo_treat, levels = c("CN", "AN", "WN"))
   
 # Plot ordination
-  OsmiaCC.PCoA.bact.rare.bee <- plot_ordination(ps.prop.rare.bee, ord.pcoa.bray.rare.bee, color = "combo_treat", shape = "sex") + 
+  OsmiaCC.PCoA.bact.rare.bee <- plot_ordination(ps.prop.bact.rare.bee, ord.pcoa.bray.rare.bee, color = "combo_treat", shape = "sex") + 
                                     theme_bw() +
-                                    theme(legend.position = "none") +
+                                    theme(legend.position = "none",
+                                          plot.title = element_text(hjust = -0.25)) +
                                     theme(text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
@@ -1013,10 +1100,62 @@
                                           legend.text = element_text(size = 14, colour = "black")) + 
                                     geom_point(size = 3) +
                                     scale_color_manual(values = climate.colors) +
-                                    labs(title = "A",
+                                    labs(title = bact.title,
                                          color = "Treatment",
                                          shape = "Sex")
   OsmiaCC.PCoA.bact.rare.bee
+  
+# Subset males
+  ps.prop.bact.rare.bee.M <- subset_samples(ps.prop.bact.rare.bee, sex == "M")
+  
+# PCoA using Bray-Curtis distance
+  ord.pcoa.bray.bact.rare.bee.M <- phyloseq::ordinate(ps.prop.bact.rare.bee.M, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.bact.rare.bee.M)$combo_treat <- factor(sample_data(ps.prop.bact.rare.bee.M)$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot ordination
+  OsmiaCC.PCoA.bact.rare.bee.M <- plot_ordination(ps.prop.bact.rare.bee.M, ord.pcoa.bray.bact.rare.bee.M, color = "combo_treat") + 
+                                      theme_bw() +
+                                      theme(legend.position = "none",
+                                            plot.title = element_text(hjust = -0.28)) +
+                                      theme(panel.grid.major = element_blank(),
+                                            panel.grid.minor = element_blank()) +
+                                      theme(text = element_text(size = 16)) +
+                                      theme(legend.justification = "left", 
+                                            legend.title = element_text(size = 16, colour = "black"), 
+                                            legend.text = element_text(size = 14, colour = "black")) + 
+                                      geom_point(size = 3) +
+                                      scale_color_manual(values = climate.colors) +
+                                      labs(title = bact.title,
+                                           color = "Treatment")
+  OsmiaCC.PCoA.bact.rare.bee.M
+  
+# Subset females
+  ps.prop.bact.rare.bee.F <- subset_samples(ps.prop.bact.rare.bee, sex == "F")
+  
+# PCoA using Bray-Curtis distance
+  ord.pcoa.bray.bact.rare.bee.F <- phyloseq::ordinate(ps.prop.bact.rare.bee.F, method = "PCoA", distance = "bray")
+  
+# Order samples
+  sample_data(ps.prop.bact.rare.bee.F)$combo_treat <- factor(sample_data(ps.prop.bact.rare.bee.F)$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot ordination
+  OsmiaCC.PCoA.bact.rare.bee.F <- plot_ordination(ps.prop.bact.rare.bee.F, ord.pcoa.bray.bact.rare.bee.F, color = "combo_treat") + 
+                                      theme_bw() +
+                                      theme(legend.position = "none",
+                                            plot.title = element_text(hjust = -0.26)) +
+                                      theme(panel.grid.major = element_blank(),
+                                            panel.grid.minor = element_blank()) +
+                                      theme(text = element_text(size = 16)) +
+                                      theme(legend.justification = "left", 
+                                            legend.title = element_text(size = 16, colour = "black"), 
+                                            legend.text = element_text(size = 14, colour = "black")) + 
+                                      geom_point(size = 3) +
+                                      scale_color_manual(values = climate.colors) +
+                                      labs(title = bact.title,
+                                           color = "Treatment")
+  OsmiaCC.PCoA.bact.rare.bee.F
   
 ## Stacked community plot ----
   
@@ -1051,20 +1190,21 @@
   OsmiaCC.gen.bact.controls <- ggplot(data = y3, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                                   geom_bar(stat = "identity", position = "fill") + 
                                   scale_fill_manual(values = colors) +
-                                  theme(legend.position = "right") +
+                                  theme(legend.position = "right",
+                                        plot.title = element_text(hjust = -2.0)) +
                                   ylab("Relative abundance") + 
                                   ylim(0, 1.0) +
-                                  xlab("Sample Type") +
+                                  xlab("Sample") +
                                   theme_bw() + 
                                   theme(text = element_text(size = 16)) +
                                   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
                                   theme(legend.justification = "left", 
-                                        legend.title = element_text(size = 14, colour = "black"), 
-                                        legend.text = element_text(size = 7, colour = "black")) + 
+                                        legend.title = element_text(size = 18, colour = "black"), 
+                                        legend.text = element_text(size = 16, colour = "black")) + 
                                   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                                   guides(fill = guide_legend(ncol = 1)) +
-                                  labs(fill = "Genera") +
-                                  ggtitle("Bacteria")
+                                  labs(fill = "Genera",
+                                       title = bact.title)
   OsmiaCC.gen.bact.controls
 
 # Provisions without bees
@@ -1097,21 +1237,22 @@
                               facet_grid(~ combo_treat, 
                                          scale = "free", 
                                          space = "free") +
-                              theme(legend.position = "right") +
+                              theme(legend.position = "right",
+                                    plot.title = element_text(hjust = -2.0)) +
                               ylab("Relative abundance") + 
                               ylim(0, 1.0) +
-                              xlab("Treatment") +
+                              xlab("Sample") +
                               theme_bw() + 
                               theme(text = element_text(size = 16)) +
                               theme(panel.grid.major = element_blank(), 
                                     panel.grid.minor = element_blank()) + 
                               theme(legend.justification = "left", 
-                                    legend.title = element_text(size = 16, colour = "black"), 
-                                    legend.text = element_text(size = 14, colour = "black")) + 
+                                    legend.title = element_text(size = 18, colour = "black"), 
+                                    legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               guides(fill = guide_legend(ncol = 1)) +
-                              labs(fill = "Genera") +
-                              ggtitle("A")
+                              labs(fill = "Genera",
+                                   title = bact.title)
   OsmiaCC.gen.bact.NoBee
   
 # Provisions with bees
@@ -1137,89 +1278,92 @@
 # Ensure Genus is a factor
   y9$Genus <- as.factor(y9$Genus)
   
-# Remove sample from CS  
+# Remove sample from CS
   y9 <- y9[y9$combo_treat != "CS", ]
   
 # Reorder x-axis  
   y9$combo_treat <- factor(y9$combo_treat,levels = c("CS", "CN", "AN", "WN"))
   
 # Plot Genus by treatment
-  OsmiaCC.gen.type.bact.MF <- ggplot(data = y9, aes(x = sampleID, y = Abundance, fill = Genus)) + 
-                                geom_bar(stat = "identity", position = "fill") + 
-                                facet_grid(~ combo_treat, 
-                                           scale = "free", 
-                                           space = "free") +
-                                scale_fill_manual(values = colors) +
-                                theme(legend.position = "right") +
-                                ylab("Relative abundance") + 
-                                ylim(0, 1.0) +
-                                xlab("Treatment") +
-                                theme_bw() + 
-                                theme(text = element_text(size = 16)) +
-                                theme(panel.grid.major = element_blank(), 
-                                      panel.grid.minor = element_blank()) + 
-                                theme(legend.justification = "left", 
-                                      legend.title = element_text(size = 16, colour = "black"), 
-                                      legend.text = element_text(size = 14, colour = "black")) + 
-                                theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-                                guides(fill = guide_legend(ncol = 3)) +
-                                labs(fill = "Genera") +
-                                ggtitle("A")
-  OsmiaCC.gen.type.bact.MF
+  OsmiaCC.gen.bact.bee <- ggplot(data = y9, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+                              geom_bar(stat = "identity", position = "fill") + 
+                              facet_grid(~ combo_treat, 
+                                         scale = "free", 
+                                         space = "free") +
+                              scale_fill_manual(values = colors) +
+                              theme(legend.position = "right",
+                                    plot.title = element_text(hjust = -2.0)) +
+                              ylab("Relative abundance") + 
+                              ylim(0, 1.0) +
+                              xlab("Sample") +
+                              theme_bw() + 
+                              theme(text = element_text(size = 16)) +
+                              theme(panel.grid.major = element_blank(), 
+                                    panel.grid.minor = element_blank()) + 
+                              theme(legend.justification = "left", 
+                                    legend.title = element_text(size = 18, colour = "black"), 
+                                    legend.text = element_text(size = 16, colour = "black")) + 
+                              theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              guides(fill = guide_legend(ncol = 3)) +
+                              labs(fill = "Genera",
+                                   title = bact.title)
+  OsmiaCC.gen.bact.bee
   
 # Subset data by sex
   y9.M <- y9[y9$sex == "M", ]
   y9.F <- y9[y9$sex == "F", ]
   
 # Plot Genus for each sample - males
-  OsmiaCC.gen.ID.bact.M <- ggplot(data = y9.M, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.bact.bee.M <- ggplot(data = y9.M, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity",
                                        position = "fill") + 
                               facet_grid(~ combo_treat, 
                                          scale = "free", 
                                          space = "free") +
                               scale_fill_manual(values = colors) +
-                              theme(legend.position = "right") +
+                              theme(legend.position = "right",
+                                    plot.title = element_text(hjust = -2.0)) +
                               ylab("Relative abundance") + 
                               ylim(0, 1.0) +
-                              xlab("Sample ID") +
+                              xlab("Sample") +
                               theme_bw() + 
                               theme(text = element_text(size = 16)) +
                               theme(panel.grid.major = element_blank(), 
                                     panel.grid.minor = element_blank()) + 
                               theme(legend.justification = "left", 
-                                    legend.title = element_text(size = 16, colour = "black"), 
-                                    legend.text = element_text(size = 14, colour = "black")) + 
+                                    legend.title = element_text(size = 18, colour = "black"), 
+                                    legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-                              guides(fill = guide_legend(ncol = 2)) +
-                              labs(fill = "Genera") +
-                              ggtitle("A")
-  OsmiaCC.gen.ID.bact.M
+                              guides(fill = guide_legend(ncol = 3)) +
+                              labs(fill = "Genera",
+                                   title = bact.title)
+  OsmiaCC.gen.bact.bee.M
 
 # Plot Genus for each sample - females  
-  OsmiaCC.gen.ID.bact.F <- ggplot(data = y9.F, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.bact.bee.F <- ggplot(data = y9.F, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity",
                                        position = "fill") + 
                               facet_grid(~ combo_treat, 
                                          scale = "free", 
                                          space = "free") +
                               scale_fill_manual(values = colors) +
-                              theme(legend.position = "right") +
+                              theme(legend.position = "right",
+                                    plot.title = element_text(hjust = -2.0)) +
                               ylab("Relative abundance") + 
                               ylim(0, 1.0) +
-                              xlab("Sample ID") +
+                              xlab("Sample") +
                               theme_bw() + 
                               theme(text = element_text(size = 16)) +
                               theme(panel.grid.major = element_blank(), 
                                     panel.grid.minor = element_blank()) + 
                               theme(legend.justification = "left", 
-                                    legend.title = element_text(size = 16, colour = "black"), 
-                                    legend.text = element_text(size = 14, colour = "black")) + 
+                                    legend.title = element_text(size = 18, colour = "black"), 
+                                    legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-                              guides(fill = guide_legend(ncol = 2)) +
-                              labs(fill = "Genera") +
-                              ggtitle("A")
-  OsmiaCC.gen.ID.bact.F
+                              guides(fill = guide_legend(ncol = 3)) +
+                              labs(fill = "Genera",
+                                   title = bact.title)
+  OsmiaCC.gen.bact.bee.F
   
 ## Differential abundance with rarefied data ----
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
@@ -1288,15 +1432,39 @@
 # Check to see if any padj is below alpha
   WN.AN.rare.bee_p05
 
-# Abundances ----
+# Arsenophonus ----
   
-# Agglomerate taxa
+# Agglomerate taxa by Genus
+  bact.gen <- phyloseq::tax_glom(ps6, taxrank = 'Genus')
   
-  #bact.gen <- phyloseq::tax_glom(ps6, taxrank = 'Genus')
-  #bact.gen <- phyloseq::transform_sample_counts(bact.gen, function(x) x/sum(x))
-  #bact.gen <- phyloseq::prune_samples(sample_sums(bact.gen) != 0, bact.gen)
-  #write.csv(tax_table(bact.gen), "OsmiaCC_bact_gen_taxa.csv")
-  #write.csv(otu_table(bact.gen), "OsmiaCC_bact_gen_otu.csv")
+# Transform to relative abundance  
+  bact.gen <- phyloseq::transform_sample_counts(bact.gen, function(x) x/sum(x))
   
-  #bact.abund <- read.csv("OsmiaCC_bact_abundance.csv")  
+# Subset data to contain Arsenophonus only
+  arsenophonus <- phyloseq::subset_taxa(bact.gen, Genus == "Arsenophonus")
+
+# Save data
+  write.csv(otu_table(arsenophonus), "OsmiaCC_Arsenophonus_otu.csv")
+
+# Import data
+  arseno <- read.csv("OsmiaCC_Arsenophonus.csv")
+  
+# Kruskal-Wallis test
+  stats::kruskal.test(rel_abund ~ combo_treat, data = arseno)
+
+# Reorder x-axis
+  arseno$combo_treat <- factor(arseno$combo_treat, levels = c("CN", "AN","WN"))
+  
+# Plot
+  arseno.rel.abund <- ggplot(arseno, aes(x = combo_treat, y = rel_abund, color = combo_treat)) + 
+                          geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                          geom_jitter(size = 1, alpha = 0.9) +
+                          theme_bw() +
+                          theme(panel.grid.major = element_blank(),
+                                panel.grid.minor = element_blank()) +
+                          scale_color_manual(name = "Treatment", 
+                                             values = climate.colors) +
+                          xlab("Treatment") +
+                          ylab("Relative abundance")
+  arseno.rel.abund
   

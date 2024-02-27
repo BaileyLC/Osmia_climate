@@ -756,13 +756,13 @@
 # Test the proportional hazards assumption
   cz1 <- survival::cox.zph(cox.mod1)
   print(cz1)
-  plot (cz1)
+  plot(cz1)
 
 # Remove zeros in total_surv_days
   duration <- duration[duration$total_surv_days != 0, ]
   
 # Accelerated failure time model
-  aftm.all <- survival::survreg(Surv(total_surv_days, status) ~ sex + temp_treat * micro_treat + graft_stage, data = duration, dist = "weibull")
+  aftm.all <- survival::survreg(Surv(total_surv_days, status) ~ sex + temp_treat + micro_treat + graft_stage, data = duration, dist = "weibull")
   summary(aftm.all)
   
 # Use Kaplan-Meier estimator of the residuals to determine the fit of distribution
@@ -830,28 +830,43 @@
   males.duration %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Display mean survival time by temp_treat
   males.duration %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
 
 # Display mean survival time by micro_treat
   males.duration %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Log-rank test (when rho = 0) to compare survival times between groups to expected survival time
   survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration, rho = 0)
   
 # Gehan-Wilcoxon test (when rho = 1) to compare survival times between groups
   survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration, rho = 1)
+  
+# Change micro_treat and temp_treat to factors
+  males.duration$micro_treat <- as.factor(males.duration$micro_treat)
+  males.duration$temp_treat <- as.factor(males.duration$temp_treat)
+  
+# Set micro_treat reference group as sterile
+  males.duration <- males.duration %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(males.duration$micro_treat)
+  
+# Set temp_treat reference group as ambient  
+  males.duration <- males.duration %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(males.duration$temp_treat)
   
 # Cox regression model to compare survival times between groups
   cox.mod2 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males.duration)
@@ -860,11 +875,10 @@
 # Test the proportional hazards assumption
   cz2 <- survival::cox.zph(cox.mod2)
   print(cz2)
-  plot (cz2)
+  plot(cz2)
   
 # Accelerated failure time model
-  aftm.M <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat * micro_treat + graft_stage, data = males.duration, dist = "weibull")
-  summary(aftm.M)
+  aftm.M <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration, dist = "weibull")
   
 # Construct the residuals
   fitted.M <- aftm.M$linear.predictors
@@ -884,6 +898,22 @@
                          "Survival function of Extreme Value distribution"), 
          lty = c(1,2,1), col = c(1,1,2), bty = "n")
 
+# View model output  
+  summary(aftm.M)
+  
+# Interpret coefficients 
+  aftm.M.natural <- exp(1)^-0.0722
+  aftm.M.natural <- 1 - aftm.M.natural
+  aftm.M.natural
+  
+  aftm.M.cool <- exp(1)^-0.0649
+  aftm.M.cool <- 1 - aftm.M.cool
+  aftm.M.cool
+  
+  aftm.M.warm <- exp(1)^-0.2691
+  aftm.M.warm <- 1 - aftm.M.warm
+  aftm.M.warm
+  
 # Kaplan-Meier with all male bees
   OsmiaCC.KP.all.M <- ggsurvfit(s2) +
                         theme_classic() +
@@ -909,7 +939,7 @@
   males.duration48$temp_treat <- as.factor(males.duration48$temp_treat)
   
 # Set micro_treat reference group as sterile
-  males.duration48 <- males.duration48 %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  males.duration48 <- males.duration48 %>% mutate(micro_treat = relevel(micro_treat, ref = "natural"))
   levels(males.duration48$micro_treat)
   
 # Set temp_treat reference group as ambient  
@@ -927,22 +957,25 @@
   males.duration48 %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Display mean survival time by temp_treat
   males.duration48 %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Display mean survival time by micro_treat
   males.duration48 %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Log-rank test (when rho = 0) to compare survival times between groups
   survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration48, rho = 0)
@@ -957,11 +990,10 @@
 # Test the proportional hazards assumption
   cz3 <- survival::cox.zph(cox.mod3)
   print(cz3)
-  plot (cz3)
+  plot(cz3)
   
 # Accelerated failure time model
-  aftm.M.48 <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat * micro_treat + graft_stage, data = males.duration48, dist = "weibull")
-  summary(aftm.M.48)
+  aftm.M.48 <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration48, dist = "weibull")
   
 # Construct the residuals
   fitted.M.48 <- aftm.M.48$linear.predictors
@@ -981,6 +1013,22 @@
                          "Survival function of Extreme Value distribution"), 
          lty = c(1,2,1), col = c(1,1,2), bty = "n")
 
+# View model output
+  summary(aftm.M.48)
+  
+# Interpret coefficients 
+  aftm.M.48.sterile <- exp(1)^-0.0613
+  aftm.M.48.sterile <- 1 - aftm.M.48.sterile
+  aftm.M.48.sterile
+  
+  aftm.M.48.cool <- exp(1)^-0.1351
+  aftm.M.48.cool <- 1 - aftm.M.48.cool
+  aftm.M.48.cool
+  
+  aftm.M.48.warm <- exp(1)^-0.2099
+  aftm.M.48.warm <- 1 - aftm.M.48.warm
+  aftm.M.48.warm
+  
 # Kaplan-Meier without bees that died within 48 h of grafting
   OsmiaCC.KP.M.48 <- ggsurvfit(s3) +
                         theme_classic() +
@@ -1040,22 +1088,25 @@
   females.duration %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Display mean survival time by temp_treat
   females.duration %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Display mean survival time by micro_treat
   females.duration %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Log-rank test (when rho = 0) to compare survival times between groups to expected survival time
   survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration, rho = 0)
@@ -1070,7 +1121,7 @@
 # Test the proportional hazards assumption
   cz4 <- survival::cox.zph(cox.mod4)
   print(cz4)
-  plot (cz4)
+  plot(cz4)
   
 # Kaplan-Meier with all female bees
   OsmiaCC.KP.all.F <- ggsurvfit(s4) +
@@ -1115,22 +1166,25 @@
   females.duration48 %>%
     filter(status == 1) %>%
     group_by(combo_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Display mean survival time by temp_treat
   females.duration48 %>%
     filter(status == 1) %>%
     group_by(temp_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Display mean survival time by micro_treat
   females.duration48 %>%
     filter(status == 1) %>%
     group_by(micro_treat) %>%
-    summarize(mean_surv = mean(total_surv_days),
-              st_dev_surv = sd(total_surv_days))
+    summarize(N = n(),
+              Mean = mean(total_surv_days),
+              SE = sd(total_surv_days)/sqrt(N))
   
 # Log-rank test (when rho = 0) to compare survival times between groups
   survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration48, rho = 0)
@@ -1145,7 +1199,7 @@
 # Test the proportional hazards assumption
   cz5 <- survival::cox.zph(cox.mod5)
   print(cz5)
-  plot (cz5)
+  plot(cz5)
   
 # Kaplan-Meier without bees that died within 48 h of grafting
   OsmiaCC.KP.F.48 <- ggsurvfit(s5) +
@@ -1159,5 +1213,5 @@
                         scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
                         labs(x = "Days",
                              y = "Survival probability")
-  OsmiaCC.KP.F.48  
+  OsmiaCC.KP.F.48
   

@@ -18,7 +18,7 @@
   library(emmeans) # Version 1.10.0
   library(effects) # Version 4.2-2
   library(ggplot2) # Version 3.4.3
-  library(patchwork) # Version 1.1.3
+  library(ggpubr) # Version 0.6.0
   library(cowplot) # Version 1.1.1
   library(knitr) # Version 1.45
   library(tibble) # Version 3.2.1
@@ -30,6 +30,22 @@
   library(survMisc) # Version 0.5.6
   library(multcomp) # Version 1.4-25
   library(multcompView) # Version 0.1-9
+
+# Set color scheme
+  climate.colors <- c("CS" = "#64B5F6",
+                      "CN" = "#1565C0",
+                      "AS" = "#9E9E9E",
+                      "AN" = "#616161",
+                      "WS" = "#E57373",
+                      "WN" = "#C62828")
+  
+# Set labels
+  climate.labs <- c("CS" = "Cool: Sterile",
+                    "CN" = "Cool: Natural",
+                    "AS" = "Ambient: Sterile",
+                    "AN" = "Ambient: Natural",
+                    "WS" = "Warm: Sterile",
+                    "WN" = "Warm: Natural")  
 
 # Import data
   all.sensors <- read.csv("all_sensors.csv")
@@ -78,9 +94,6 @@
                                    sec.axis = sec_axis(trans = ~.*1, name = "Relative Humidity (%)")) +
                 scale_color_manual(values = c("#C62828",  "#616161", "#1565C0"))
   treats
-  
-# Save plot
-  ggsave("OsmiaCC_treatments.png", plot = treats, width = 15, height = 8, unit = "in")
   
 # Set Sensor reference group as ambient  
   all.sensors <- all.sensors %>% mutate(Sensor = relevel(Sensor, ref = "Ambient"))
@@ -157,17 +170,17 @@
   
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
   pairs(emmeans(gau.mass.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
-  
-# Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
-  pairs(emmeans(gau.mass.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
-  
-# Set color scheme
-  climate.colors <- c("CS" = "#64B5F6",
-                      "CN" = "#1565C0",
-                      "AS" = "#9E9E9E",
-                      "AN" = "#616161",
-                      "WS" = "#E57373",
-                      "WN" = "#C62828")
+ 
+# Save p-values  
+  stats.gau.mass.M <- tibble::tribble(
+                                      ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                        "WS",     "WN",    0.02,      "*",
+                                        "AS",     "WN",    0.04,      "*"
+                                    )
+  stats.gau.mass.M
+   
+# All pairwise comparisons with Tukey's HSD adjustment
+  emmeans(gau.mass.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey") 
   
 # Reorder the x-axis
   males.health.mass$combo_treat <- factor(males.health.mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -184,7 +197,7 @@
                         alpha = 0.9) +
             theme_bw() +
             theme(legend.position = "none",
-                  plot.title = element_text(hjust = -0.14)) +
+                  plot.title = element_text(hjust = -0.17)) +
             theme(panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank()) +
             theme(text = element_text(size = 16)) +
@@ -193,7 +206,12 @@
                                values = climate.colors) +
             labs(title = bm.title) +
             ylab("Larval body mass (mg)") +
-            xlab("Treatment")
+            xlab("Treatment") +
+            ggpubr::stat_pvalue_manual(stats.gau.mass.M,
+                                       label = "p.adj.signif",
+                                       y.position = 18,
+                                       step.increase = 0.1,
+                                       tip.length = 0.01)
   bm.M
   
 # Females
@@ -248,7 +266,7 @@
                           alpha = 0.9) +
               theme_bw() +
               theme(legend.position = "none",
-                    plot.title = element_text(hjust = -0.14)) +
+                    plot.title = element_text(hjust = -0.16)) +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
               theme(text = element_text(size = 16)) +
@@ -305,11 +323,16 @@
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
   pairs(emmeans(gau.fat.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
   
-# Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
-  pairs(emmeans(gau.fat.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
-  
 # All pairwise comparisons with Tukey's HSD adjustment
   emmeans(gau.fat.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
+  
+# Save p-values  
+  stats.gau.fat.M <- tibble::tribble(
+                                     ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                       "WS",     "WN",    0.05,      "*",
+                                       "AS",     "WN",    0.04,      "*"
+                                 )
+  stats.gau.fat.M
   
 # Reorder the x-axis
   males.health.fat$combo_treat <- factor(males.health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -326,16 +349,21 @@
                           alpha = 0.9) +
               theme_bw() +
               theme(legend.position = "none",
-                    plot.title = element_text(hjust = -0.12)) +
+                    plot.title = element_text(hjust = -0.15)) +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
               theme(text = element_text(size = 16)) +
-              ylim(0, 6) +
+              ylim(0, 8) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors) +
               labs(title = fat.title) +
               ylab("Proportion of body fat") + 
-              xlab("Treatment")
+              xlab("Treatment") +
+              ggpubr::stat_pvalue_manual(stats.gau.fat.M,
+                                         label = "p.adj.signif",
+                                         y.position = 6,
+                                         step.increase = 0.1,
+                                         tip.length = 0.01)
   fat.M
   
 # Females  
@@ -390,11 +418,11 @@
                           alpha = 0.9) +
               theme_bw() +
               theme(legend.position = "none",
-                    plot.title = element_text(hjust = -0.12)) +
+                    plot.title = element_text(hjust = -0.14)) +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
               theme(text = element_text(size = 16)) +
-              ylim(0, 6) +
+              ylim(0, 8) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors) +
               labs(title = fat.title) +
@@ -458,16 +486,19 @@
 # All pairwise comparisons with Tukey's HSD adjustment
   emmeans(gam.dur.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
-# Set labels
-  climate.labs <- c("CS" = "Cool: Sterile",
-                    "CN" = "Cool: Natural",
-                    "AS" = "Ambient: Sterile",
-                    "AN" = "Ambient: Natural",
-                    "WS" = "Warm: Sterile",
-                    "WN" = "Warm: Natural")  
+# Save p-values
+  stats.gam.dur.M <- tibble::tribble(
+                                     ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                       "AS",     "WN",    0.03,      "*",
+                                       "CS",     "WS",    0.01,      "*",
+                                       "CS",     "WN",    0.0001,    "***",
+                                       "WS",     "CN",    0.04,      "*",
+                                       "CN",     "WN",    0.002,     "**"
+                                   )
+  stats.gam.dur.M
   
 # Reorder the x-axis
-  males.health$combo_treat <- factor(males.health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
+  males.duration$combo_treat <- factor(males.duration$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
   
 # Italicize title
   dur.title <- expression(paste("(", italic("c"), ")"))
@@ -483,14 +514,19 @@
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
               theme(text = element_text(size = 16),
-                    plot.title = element_text(hjust = -0.14)) +
-              ylim(5, 20) +
+                    plot.title = element_text(hjust = -0.17)) +
+              ylim(0, 25) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors,
                                  labels = climate.labs) +             
               labs(title = dur.title) +
               ylab("Duration Larval instars II-V (days)") + 
-              xlab("Treatment")
+              xlab("Treatment") +
+              ggpubr::stat_pvalue_manual(stats.gam.dur.M,
+                                         label = "p.adj.signif",
+                                         y.position = 20,
+                                         step.increase = 0.1,
+                                         tip.length = 0.01)
   dur.M
   
 # Females
@@ -538,8 +574,16 @@
 # All pairwise comparisons with Tukey's HSD adjustment
   emmeans(gau.dur.F, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
   
+# Save p-values
+  stats.gam.dur.F <- tibble::tribble(
+                                     ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                       "AS",     "WS",     0.004,     "**",
+                                       "AS",     "WN",     0.0006,    "**"
+                                  )
+  stats.gam.dur.F
+  
 # Reorder the x-axis
-  females.health$combo_treat <- factor(females.health$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
+  females.duration$combo_treat <- factor(females.duration$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN")) 
   
 # Plot larval duration by treatment
   dur.F <- ggplot(females.duration, aes(x = combo_treat, y = days_instar2.5, color = combo_treat)) + 
@@ -552,14 +596,19 @@
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
               theme(text = element_text(size = 16),
-                    plot.title = element_text(hjust = -0.14)) +
-              ylim(5, 20) +
+                    plot.title = element_text(hjust = -0.16)) +
+              ylim(0, 25) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors,
                                  labels = climate.labs) +             
               labs(title = dur.title) +
               ylab("Duration Larval instars II-V (days)") + 
-              xlab("Treatment")
+              xlab("Treatment") +
+              ggpubr::stat_pvalue_manual(stats.gam.dur.F,
+                                         label = "p.adj.signif",
+                                         y.position = 20,
+                                         step.increase = 0.1,
+                                         tip.length = 0.01)
   dur.F
   
 ## Mortality ----
@@ -836,7 +885,7 @@
          lty = c(1,2,1), col = c(1,1,2), bty = "n")
 
 # Kaplan-Meier with all male bees
-  OsmiaCC.KP.all <- ggsurvfit(s2) +
+  OsmiaCC.KP.all.M <- ggsurvfit(s2) +
                         theme_classic() +
                         theme(legend.position = "right") +
                         theme(text = element_text(size = 16)) +
@@ -847,7 +896,7 @@
                         scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
                         labs(x = "Days",
                              y = "Survival probability")
-  OsmiaCC.KP.all
+  OsmiaCC.KP.all.M
   
 # NOTE: The analyses below does NOT include bees that died within the first 48 h after grafting
 
@@ -919,7 +968,7 @@
   res.M.48 <- (log(aftm.M.48$y[, 1]) - fitted.M.48) / aftm.M.48$scale
   
 # Fit regression model without covariates
-  resKM.M.48 <- survfit(Surv(res.M.48, status) ~ 1, data = males.duration)
+  resKM.M.48 <- survfit(Surv(res.M.48, status) ~ 1, data = males.duration48)
   
 # Plot residuals  
   plot(resKM.M.48, mark.time = FALSE, xlab = "AFTM Residuals", ylab = "Survival Probability")
@@ -946,13 +995,169 @@
                              y = "Survival probability")
   OsmiaCC.KP.M.48
   
-  ggsave("OsmiaCC_KP_48.png", plot = OsmiaCC.KP.M.48, width = 6, height = 4, unit = "in")
-
-## Plotting ----  
+# Females only
   
-# Arrange health and life history plots
-  OsmiaCC.fitness <- bm + fat + dur + plot_layout(ncol = 3)
-  OsmiaCC.fitness
+# Recreate original df because NAs were removed above during analysis of larval development
+  females.duration <- duration[duration$sex == "F", ]
   
-  ggsave("OsmiaCC_fitness.png", plot = OsmiaCC.fitness, width = 18, height = 6, unit = "in")
+# Convert chr to date
+  females.duration <- females.duration %>%
+    mutate(
+      date_nesting_start = ymd(date_nesting_start),
+      date_nesting_end = ymd(date_nesting_end),
+      date_graft = ymd(date_graft),
+      date_instar1 = ymd(date_instar1),
+      date_instar2 = ymd(date_instar2),
+      date_instar5 = ymd(date_instar5),
+      date_last_alive = ymd(date_last_alive)
+    )
+  
+# Check to see if it worked  
+  tibble(females.duration)
+  
+# Calculate the number of days bees survived
+  females.duration <- females.duration %>%
+    mutate(
+      total_surv_days = as.duration(date_graft %--% date_last_alive / ddays(1))
+    )
+  
+# Format chr to numeric
+  females.duration$total_surv_days <- as.numeric(females.duration$total_surv_days)
+  
+# Check to see if it worked   
+  head(females.duration)
+  
+# NOTE: The analyses below includes bees that died within the first 48 h after grafting  
+  
+# Create a survival object
+  survival::Surv(females.duration$total_surv_days, females.duration$status)
+  
+# Fit the survival curve
+  s4 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration)
+  summary(s4)
+  
+# Display mean survival time by combo_treat
+  females.duration %>%
+    filter(status == 1) %>%
+    group_by(combo_treat) %>%
+    summarize(mean_surv = mean(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
+  
+# Display mean survival time by temp_treat
+  females.duration %>%
+    filter(status == 1) %>%
+    group_by(temp_treat) %>%
+    summarize(mean_surv = mean(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
+  
+# Display mean survival time by micro_treat
+  females.duration %>%
+    filter(status == 1) %>%
+    group_by(micro_treat) %>%
+    summarize(mean_surv = mean(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
+  
+# Log-rank test (when rho = 0) to compare survival times between groups to expected survival time
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration, rho = 0)
+  
+# Gehan-Wilcoxon test (when rho = 1) to compare survival times between groups
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration, rho = 1)
+  
+# Cox regression model to compare survival times between groups
+  cox.mod4 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = females.duration)
+  summary(cox.mod4)
+  
+# Test the proportional hazards assumption
+  cz4 <- survival::cox.zph(cox.mod4)
+  print(cz4)
+  plot (cz4)
+  
+# Kaplan-Meier with all female bees
+  OsmiaCC.KP.all.F <- ggsurvfit(s4) +
+                        theme_classic() +
+                        theme(legend.position = "right") +
+                        theme(text = element_text(size = 16)) +
+                        scale_color_manual(name = "Treatment", 
+                                           values = c("#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                           labels = c('Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                        scale_y_continuous(limits = c(0, 1)) +
+                        scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+                        labs(x = "Days",
+                             y = "Survival probability")
+  OsmiaCC.KP.all.F
+  
+# NOTE: The analyses below does NOT include bees that died within the first 48 h after grafting
+  
+# Remove bees that died within 48 h of grafting
+  females.duration48 <- females.duration %>% 
+    filter(date_last_alive > '2023-06-09')
+  
+# Change micro_treat and temp_treat to factors
+  females.duration48$micro_treat <- as.factor(females.duration48$micro_treat)
+  females.duration48$temp_treat <- as.factor(females.duration48$temp_treat)
+  
+# Set micro_treat reference group as sterile
+  females.duration48 <- females.duration48 %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
+  levels(females.duration48$micro_treat)
+  
+# Set temp_treat reference group as ambient  
+  females.duration48 <- females.duration48 %>% mutate(temp_treat = relevel(temp_treat, ref = "ambient"))
+  levels(females.duration48$temp_treat)
+  
+# Create a survival object
+  survival::Surv(females.duration48$total_surv_days, females.duration48$status)
+  
+# Fit the survival curve
+  s5 <- ggsurvfit::survfit2(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration48)
+  summary(s5)
+  
+# Display mean survival time by combo_treat
+  females.duration48 %>%
+    filter(status == 1) %>%
+    group_by(combo_treat) %>%
+    summarize(mean_surv = mean(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
+  
+# Display mean survival time by temp_treat
+  females.duration48 %>%
+    filter(status == 1) %>%
+    group_by(temp_treat) %>%
+    summarize(mean_surv = mean(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
+  
+# Display mean survival time by micro_treat
+  females.duration48 %>%
+    filter(status == 1) %>%
+    group_by(micro_treat) %>%
+    summarize(mean_surv = mean(total_surv_days),
+              st_dev_surv = sd(total_surv_days))
+  
+# Log-rank test (when rho = 0) to compare survival times between groups
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration48, rho = 0)
+  
+# Gehan-Wilcoxon test (when rho = 1) to compare survival times between groups
+  survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = females.duration48, rho = 1)
+  
+# Cox regression model to compare survival times between groups
+  cox.mod5 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = females.duration48)
+  summary(cox.mod5)
+  
+# Test the proportional hazards assumption
+  cz5 <- survival::cox.zph(cox.mod5)
+  print(cz5)
+  plot (cz5)
+  
+# Kaplan-Meier without bees that died within 48 h of grafting
+  OsmiaCC.KP.F.48 <- ggsurvfit(s5) +
+                        theme_classic() +
+                        theme(legend.position = "right") +
+                        theme(text = element_text(size = 16)) +
+                        scale_color_manual(name = "Treatment", 
+                                           values = c("#9E9E9E", "#616161", "#E57373", "#C62828"),
+                                           labels = c('Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +
+                        scale_y_continuous(limits = c(0, 1)) +
+                        scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25)) +
+                        labs(x = "Days",
+                             y = "Survival probability")
+  OsmiaCC.KP.F.48  
   

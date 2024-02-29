@@ -1299,25 +1299,25 @@
 # Control provisions
   
 # Agglomerate taxa by Genus
-  y10 <- phyloseq::tax_glom(ps12, taxrank = 'Genus')
+  y11 <- phyloseq::tax_glom(ps12, taxrank = 'Genus')
   
 # Transform counts to relative abundances
-  y11 <- phyloseq::transform_sample_counts(y10, function(x) x/sum(x))
+  y12 <- phyloseq::transform_sample_counts(y11, function(x) x/sum(x))
   
 # Convert to a ggplot2-friendly df
-  y12 <- phyloseq::psmelt(y11)
+  y13 <- phyloseq::psmelt(y12)
   
 # Ensure Genus is a chr
-  y12$Genus <- as.character(y12$Genus)
+  y13$Genus <- as.character(y13$Genus)
   
 # Group Genera with less that 1% abundance and rename
-  y12$Genus[y12$Abundance < 0.01] <- "Genera < 1% abund."
+  y13$Genus[y13$Abundance < 0.01] <- "Genera < 1% abund."
   
 # Ensure Genus is a factor
-  y12$Genus <- as.factor(y12$Genus)
+  y13$Genus <- as.factor(y13$Genus)
   
 # Plot Genus by sample type 
-  OsmiaCC.gen.fung.controls <- ggplot(data = y12, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.fung.controls <- ggplot(data = y13, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                                   geom_bar(stat = "identity", position = "fill") + 
                                   scale_fill_manual(values = colors) +
                                   theme(legend.position = "right",
@@ -1332,6 +1332,7 @@
                                         legend.title = element_text(size = 18, colour = "black"), 
                                         legend.text = element_text(size = 16, colour = "black")) + 
                                   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                  theme(panel.spacing.x = unit(0.1, "lines")) +
                                   guides(fill = guide_legend(ncol = 2)) +
                                   labs(fill = "Genera",
                                        title = fung.title)
@@ -1340,28 +1341,28 @@
 # Provisions without bees
   
 # Agglomerate taxa by Genus
-  y13 <- phyloseq::tax_glom(ps13, taxrank = 'Genus')
+  y14 <- phyloseq::tax_glom(ps13, taxrank = 'Genus')
   
 # Transform counts to relative abundances
-  y14 <- phyloseq::transform_sample_counts(y13, function(x) x/sum(x))
+  y15 <- phyloseq::transform_sample_counts(y14, function(x) x/sum(x))
   
 # Convert to a ggplot2-friendly df
-  y15 <- phyloseq::psmelt(y14)
+  y16 <- phyloseq::psmelt(y15)
   
 # Ensure Genus is a chr
-  y15$Genus <- as.character(y15$Genus)
+  y16$Genus <- as.character(y16$Genus)
   
 # Group Genera with less that 1% abundance and rename
-  y15$Genus[y15$Abundance < 0.01] <- "Genus < 1% abund."
+  y16$Genus[y16$Abundance < 0.01] <- "Genus < 1% abund."
   
 # Ensure Genus is a factor
-  y15$Genus <- as.factor(y15$Genus)
+  y16$Genus <- as.factor(y16$Genus)
   
 # Reorder x-axis  
-  y15$combo_treat <- factor(y15$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  y16$combo_treat <- factor(y16$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Plot treatment by Genus
-  OsmiaCC.gen.fung.NoBee <- ggplot(data = y15, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.fung.NoBee <- ggplot(data = y16, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                                 geom_bar(stat = "identity", position = "fill") + 
                                 scale_fill_manual(values = colors) +
                                 facet_grid(~ combo_treat, 
@@ -1381,6 +1382,7 @@
                                       legend.text = element_text(size = 16, colour = "black")) + 
                                 guides(fill = guide_legend(ncol = 2)) +
                                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                theme(panel.spacing.x = unit(0.1, "lines")) +
                                 labs(fill = "Genera",
                                      title = fung.title)
   OsmiaCC.gen.fung.NoBee
@@ -1388,28 +1390,28 @@
 # Provisions with bees
   
 # Agglomerate taxa by Genus
-  y16 <- phyloseq::tax_glom(ps14, taxrank = 'Genus')
+  y17 <- phyloseq::tax_glom(ps14, taxrank = 'Genus')
   
 # Transform counts to relative abundances
-  y17 <- phyloseq::transform_sample_counts(y16, function(x) x/sum(x))
+  y18 <- phyloseq::transform_sample_counts(y17, function(x) x/sum(x))
   
 # Convert to a ggplot2-friendly df
-  y18 <- phyloseq::psmelt(y17)
+  y19 <- phyloseq::psmelt(y18)
   
 # Ensure Genus is a chr
-  y18$Genus <- as.character(y18$Genus)
+  y19$Genus <- as.character(y19$Genus)
   
 # Group Genera with less that 1% abundance and rename
-  y18$Genus[y18$Abundance < 0.01] <- "Genera < 1% abund."
+  y19$Genus[y19$Abundance < 0.01] <- "Genera < 1% abund."
   
 # Ensure Genus is a factor
-  y18$Genus <- as.factor(y18$Genus)
+  y19$Genus <- as.factor(y19$Genus)
   
 # Reorder x-axis  
-  y18$combo_treat <- factor(y18$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  y19$combo_treat <- factor(y19$combo_treat,levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Plot Genus by treatment
-  OsmiaCC.gen.fung.bee <- ggplot(data = y18, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.fung.bee <- ggplot(data = y19, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity", position = "fill") + 
                               facet_grid(~ combo_treat, 
                                          scale = "free", 
@@ -1429,16 +1431,17 @@
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               guides(fill = guide_legend(ncol = 3)) +
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              theme(panel.spacing.x = unit(0.1, "lines")) +
                               labs(fill = "Genera",
                                    title = fung.title)
   OsmiaCC.gen.fung.bee
   
 # Subset data by sex
-  y18.M <- y18[y18$sex == "M", ]
-  y18.F <- y18[y18$sex == "F", ]
+  y19.M <- y19[y19$sex == "M", ]
+  y19.F <- y19[y19$sex == "F", ]
   
 # Plot Genus for each sample - males
-  OsmiaCC.gen.fung.bee.M <- ggplot(data = y18.M, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.fung.bee.M <- ggplot(data = y19.M, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity",
                                        position = "fill") + 
                               facet_grid(~ combo_treat, 
@@ -1458,13 +1461,14 @@
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              theme(panel.spacing.x = unit(0.1, "lines")) +
                               guides(fill = guide_legend(ncol = 3)) +
                               labs(fill = "Genera",
                                    title = fung.title)
   OsmiaCC.gen.fung.bee.M
   
 # Plot Genus for each sample - females  
-  OsmiaCC.gen.fung.bee.F <- ggplot(data = y18.F, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+  OsmiaCC.gen.fung.bee.F <- ggplot(data = y19.F, aes(x = sampleID, y = Abundance, fill = Genus)) + 
                               geom_bar(stat = "identity",
                                        position = "fill") + 
                               facet_grid(~ combo_treat, 
@@ -1484,11 +1488,65 @@
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              theme(panel.spacing.x = unit(0.1, "lines")) +
                               guides(fill = guide_legend(ncol = 3)) +
                               labs(fill = "Genera",
                                    title = fung.title)
   OsmiaCC.gen.fung.bee.F
   
+# Top 15 Genera in male bees
+  
+# Provisions with bees
+  y20 <- subset_samples(ps14, sex == "M")
+  
+# Agglomerate taxa by Genus
+  y21 <- phyloseq::tax_glom(y20, taxrank = 'Genus')
+  
+# Identify the top 15 genera
+  top15.fung.gen <- microbiome::top_taxa(y21, n = 15)
+  
+# Remove taxa that are not in the top 15
+  ps.top15.fung.gen <- phyloseq::prune_taxa(top15.fung.gen, y21)
+  
+# Remove samples with 0 reads from the top 15 genera
+  ps.top15.fung.gen <- phyloseq::prune_samples(sample_sums(ps.top15.fung.gen) != 0, ps.top15.fung.gen)
+  
+# Transform counts to relative abundances
+  ps.top15.fung.gen.trans <- phyloseq::transform_sample_counts(ps.top15.fung.gen, function(x) x/sum(x))
+  
+# Convert to a ggplot2-friendly df
+  ps.top15.fung.gen.trans.melt <- phyloseq::psmelt(ps.top15.fung.gen.trans)
+  
+# Order samples on x-axis
+  ps.top15.fung.gen.trans.melt$combo_treat <- factor(ps.top15.fung.gen.trans.melt$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot top 15 genera for each sample
+  OsmiaCC.15gen.relabund.fung <- ggplot(data = ps.top15.fung.gen.trans.melt, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+                                    geom_bar(stat = "identity", position = "fill") + 
+                                    scale_fill_manual(values = colors) +
+                                    facet_grid(~ combo_treat, 
+                                               scale = "free", 
+                                               space = "free") +
+                                    theme(legend.position = "right") +
+                                    ylab("Relative abundance") +
+                                    ylim(0, 1.0) +
+                                    scale_x_discrete(expand = c(0, 1)) +
+                                    xlab("Sample") +
+                                    theme_bw() + 
+                                    theme(text = element_text(size = 16)) +
+                                    theme(panel.grid.major = element_blank(), 
+                                          panel.grid.minor = element_blank()) +
+                                    theme(legend.justification = "left", 
+                                          legend.title = element_text(size = 16, colour = "black"), 
+                                          legend.text = element_text(size = 12, colour = "black"),
+                                          strip.text = element_text(size = 14)) + 
+                                    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                    theme(panel.spacing.x = unit(0.1, "lines")) +
+                                    guides(fill = guide_legend(ncol = 1)) +
+                                    labs(fill = "Genera",
+                                         title = "B")
+  OsmiaCC.15gen.relabund.fung
+
 ## Differential abundance with rarefied data ----
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html
 

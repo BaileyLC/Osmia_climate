@@ -757,7 +757,7 @@
   stats::anova(mod14)
   
 # Reorder x-axis
-  bact.evenness.M$combo_treat <- factor(bact.evenness.M$combo_treat, levels = c("CN", "AN",))
+  bact.evenness.M$combo_treat <- factor(bact.evenness.M$combo_treat, levels = c("CN", "AN","WN"))
   
 # Plot
   OsmiaCC.Pielou.bact.bee.M <- ggplot(bact.evenness.M, aes(x = combo_treat, y = pielou, color = combo_treat)) +
@@ -1253,6 +1253,7 @@
                                         legend.title = element_text(size = 18, colour = "black"), 
                                         legend.text = element_text(size = 16, colour = "black")) + 
                                   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                  theme(panel.spacing.x = unit(0.1, "lines")) +
                                   guides(fill = guide_legend(ncol = 1)) +
                                   labs(fill = "Genera",
                                        title = bact.title)
@@ -1261,10 +1262,10 @@
 # Provisions without bees
   
 # Agglomerate taxa by Genus
-  y4 <- phyloseq::tax_glom(ps5, taxrank = 'Genus')
+  y9 <- phyloseq::tax_glom(ps5, taxrank = 'Genus')
   
 # Transform counts to relative abundances
-  y5 <- phyloseq::transform_sample_counts(y4, function(x) x/sum(x))
+  y5 <- phyloseq::transform_sample_counts(y9, function(x) x/sum(x))
   
 # Convert to a ggplot2-friendly df
   y6 <- phyloseq::psmelt(y5)
@@ -1301,6 +1302,7 @@
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              theme(panel.spacing.x = unit(0.1, "lines")) +
                               guides(fill = guide_legend(ncol = 1)) +
                               labs(fill = "Genera",
                                    title = bact.title)
@@ -1333,7 +1335,7 @@
   y9 <- y9[y9$combo_treat != "CS", ]
   
 # Reorder x-axis  
-  y9$combo_treat <- factor(y9$combo_treat,levels = c("CS", "CN", "AN", "WN"))
+  y9$combo_treat <- factor(y9$combo_treat,levels = c("CN", "AN", "WN"))
   
 # Plot Genus by treatment
   OsmiaCC.gen.bact.bee <- ggplot(data = y9, aes(x = sampleID, y = Abundance, fill = Genus)) + 
@@ -1355,6 +1357,7 @@
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              theme(panel.spacing.x = unit(0.1, "lines")) +
                               guides(fill = guide_legend(ncol = 3)) +
                               labs(fill = "Genera",
                                    title = bact.title)
@@ -1385,6 +1388,7 @@
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              theme(panel.spacing.x = unit(0.1, "lines")) +
                               guides(fill = guide_legend(ncol = 3)) +
                               labs(fill = "Genera",
                                    title = bact.title)
@@ -1411,10 +1415,61 @@
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                              theme(panel.spacing.x = unit(0.1, "lines")) +
                               guides(fill = guide_legend(ncol = 3)) +
                               labs(fill = "Genera",
                                    title = bact.title)
   OsmiaCC.gen.bact.bee.F
+  
+# Top 15 Genera in male bees
+  
+# Agglomerate taxa by Genus
+  y10 <- phyloseq::tax_glom(ps6, taxrank = 'Genus')
+  
+# Identify the top 15 genera
+  top15.bact.gen <- microbiome::top_taxa(y10, n = 15)
+  
+# Remove taxa that are not in the top 15
+  ps.top15.bact.gen <- phyloseq::prune_taxa(top15.bact.gen, y10)
+  
+# Remove samples with 0 reads from the top 15 genera
+  ps.top15.bact.gen <- phyloseq::prune_samples(sample_sums(ps.top15.bact.gen) != 0, ps.top15.bact.gen)
+  
+# Transform counts to relative abundances
+  ps.top15.bact.gen.trans <- phyloseq::transform_sample_counts(ps.top15.bact.gen, function(x) x/sum(x))
+  
+# Convert to a ggplot2-friendly df
+  ps.top15.bact.gen.trans.melt <- phyloseq::psmelt(ps.top15.bact.gen.trans)
+  
+# Order samples on x-axis
+  ps.top15.bact.gen.trans.melt$combo_treat <- factor(ps.top15.bact.gen.trans.melt$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot top 15 genera for each sample
+  OsmiaCC.15gen.relabund.bact <- ggplot(data = ps.top15.bact.gen.trans.melt, aes(x = sampleID, y = Abundance, fill = Genus)) + 
+                                    geom_bar(stat = "identity", position = "fill") + 
+                                    scale_fill_manual(values = colors) +
+                                    facet_grid(~ combo_treat, 
+                                               scale = "free", 
+                                               space = "free") +
+                                    theme(legend.position = "right") +
+                                    ylab("Relative abundance") + 
+                                    ylim(0, 1.0) +
+                                    scale_x_discrete(expand = c(0, 1)) +
+                                    xlab("Sample") +
+                                    theme_bw() + 
+                                    theme(text = element_text(size = 16)) +
+                                    theme(panel.grid.major = element_blank(), 
+                                          panel.grid.minor = element_blank()) + 
+                                    theme(legend.justification = "left", 
+                                          legend.title = element_text(size = 16, colour = "black"), 
+                                          legend.text = element_text(size = 12, colour = "black"),
+                                          strip.text = element_text(size = 14)) + 
+                                    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                    theme(panel.spacing.x = unit(0.1, "lines")) +
+                                    guides(fill = guide_legend(ncol = 1)) +
+                                    labs(fill = "Genera",
+                                         title = "A")
+  OsmiaCC.15gen.relabund.bact
   
 ## Differential abundance with rarefied data ----
 # Resource: https://joey711.github.io/phyloseq-extensions/DESeq2.html

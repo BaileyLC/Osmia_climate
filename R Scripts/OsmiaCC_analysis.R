@@ -78,21 +78,25 @@
   all.sensors$DateTime <- as.POSIXct(paste(all.sensors$Date, all.sensors$Time),
                                      format = "%Y-%m-%d %I:%M:%S %p")  
 
+# Temp colors
+  temp.colors <- c()
+  
 # Manually order legend
   all.sensors$Sensor <- factor(all.sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
 
 # Plot temperature & humidity
   treats <- ggplot(all.sensors, aes(x = DateTime, color = Sensor, group = Sensor)) +
                 geom_line(aes(y = Temp, linetype = "Temperature")) + 
-                geom_line(aes(y = Humidity, linetype = "Humidity")) +
+                geom_line(aes(y = Humidity, linetype = "Relative Humidity")) +
                 theme_bw() +
                 theme(panel.grid.major = element_blank(),
                       panel.grid.minor = element_blank()) +
-                theme(text = element_text(size = 16)) +
+                theme(text = element_text(size = 12)) +
                 xlab("Date") +
                 scale_y_continuous(name = "Temperature (°C)", 
                                    sec.axis = sec_axis(trans = ~.*1, name = "Relative Humidity (%)")) +
-                scale_color_manual(values = c("#C62828",  "#616161", "#1565C0"))
+                scale_color_manual(name = "Temperature", values = c("#C62828",  "#616161", "#1565C0")) +
+                scale_linetype_manual(name = "Variable", values = c("solid", "dashed"))
   treats
   
 # Set Sensor reference group as ambient  
@@ -127,8 +131,8 @@
               RH_max = max(Humidity))
   
 ## Larval body mass ----
-
-# Males  
+  
+# Males
   
 # Subset df to include just treatments and response variable
   males.health.mass <- males.health %>%
@@ -170,17 +174,17 @@
   
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
   pairs(emmeans(gau.mass.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
- 
+  
+# All pairwise comparisons with Tukey's HSD adjustment
+  emmeans(gau.mass.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey") 
+  
+  
 # Save p-values  
   stats.gau.mass.M <- tibble::tribble(
                                       ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                        "WS",     "WN",    0.02,      "*",
                                         "AS",     "WN",    0.04,      "*"
                                     )
   stats.gau.mass.M
-   
-# All pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gau.mass.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey") 
   
 # Reorder the x-axis
   males.health.mass$combo_treat <- factor(males.health.mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -735,7 +739,7 @@
               Mean = mean(total_surv_days),
               SE = sd(total_surv_days)/sqrt(N))
   
-# Display mean survival time by micro_treat
+# Display mean survival time by sex
   duration %>%
     filter(status == 1) %>%
     group_by(sex) %>%
@@ -953,7 +957,7 @@
   males.duration48$temp_treat <- as.factor(males.duration48$temp_treat)
   
 # Set micro_treat reference group as sterile
-  males.duration48 <- males.duration48 %>% mutate(micro_treat = relevel(micro_treat, ref = "natural"))
+  males.duration48 <- males.duration48 %>% mutate(micro_treat = relevel(micro_treat, ref = "sterile"))
   levels(males.duration48$micro_treat)
   
 # Set temp_treat reference group as ambient  
@@ -1030,18 +1034,19 @@
 # View model output
   summary(aftm.M.48)
   
-# Interpret coefficients 
-  aftm.M.48.sterile <- exp(1)^-0.0613
-  aftm.M.48.sterile <- 1 - aftm.M.48.sterile
-  aftm.M.48.sterile
+# Interpret coefficients
+# Resource: https://stats.stackexchange.com/questions/6026/how-do-i-interpret-expb-in-cox-regression
+
+  aftm.M.48.natural <- exp(0.0613)
+  aftm.M.48.natural # natural microbiome increases probability of hazard by 6%
   
-  aftm.M.48.cool <- exp(1)^-0.1351
-  aftm.M.48.cool <- 1 - aftm.M.48.cool
-  aftm.M.48.cool
+  aftm.M.48.cool <- exp(-0.1351)
+  aftm.M.48.cool <- 1/exp(-0.1351)
+  aftm.M.48.cool # cool treatment decreases probability of hazard by 14.47%
   
-  aftm.M.48.warm <- exp(1)^-0.2099
-  aftm.M.48.warm <- 1 - aftm.M.48.warm
-  aftm.M.48.warm
+  aftm.M.48.warm <- exp(-0.2099)
+  aftm.M.48.warm <- 1 - exp(-0.2099)
+  aftm.M.48.warm # warm temp. decreases probability of hazard by 18.93%
   
 # Obtain proportional hazards
   aftm.M.48.ph <- -coef(aftm.M.48)/aftm.M.48$scale
@@ -1061,7 +1066,7 @@
   OsmiaCC.KP.M.48 <- ggsurvfit(s3) +
                         theme_classic() +
                         theme(legend.position = "right") +
-                        theme(text = element_text(size = 16)) +
+                        theme(text = element_text(size = 12)) +
                         scale_color_manual(name = "Treatment", 
                                            values = c("#64B5F6","#1565C0", "#9E9E9E", "#616161", "#E57373", "#C62828"),
                                            labels = c('Cool: Sterile', 'Cool: Natural', 'Ambient: Sterile', 'Ambient: Natural', 'Warm: Sterile', 'Warm: Natural')) +

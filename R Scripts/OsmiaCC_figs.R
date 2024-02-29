@@ -328,6 +328,15 @@
 # Save plot
   ggsave("OsmiaCC_stacked_bee_F.png", plot = OsmiaCC.stacked.bee.F, width = 18, height = 12, units = "in")
   
+## Top 15 genera in provisions with bees  
+  
+# Create plot
+  OsmiaCC.stacked.15.bee <- OsmiaCC.15gen.relabund.bact + OsmiaCC.15gen.relabund.fung + plot_layout(ncol = 1, nrow = 2)
+  OsmiaCC.stacked.15.bee
+  
+# Save plot
+  ggsave("OsmiaCC_stacked_15_bee.png", plot = OsmiaCC.stacked.15.bee, width = 18, height = 12, units = "in")
+  
 ### Arsenophonus ----
   
 # Save plot

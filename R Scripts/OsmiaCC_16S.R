@@ -526,15 +526,15 @@
 # Subset data to include just males
   bact.rich.bee.M <- bact.rich.bee[bact.rich.bee$sex == "M", ]
   
-# Examine interactive effects of temperature on Shannon diversity, with graft stage as a random effect
+# Examine the effects of temperature on Shannon diversity, with graft stage as a random effect
   mod7 <- nlme::lme(Shannon ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.M)
   stats::anova(mod7)
   
-# Examine interactive effects of temperature on Simpson diversity, with graft stage as a random effect
+# Examine the effects of temperature on Simpson diversity, with graft stage as a random effect
   mod8 <- nlme::lme(Simpson ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.M)
   stats::anova(mod8)
   
-# Examine interactive effects of temperature on Observed richness, with graft stage as a random effect
+# Examine the effects of temperature on Observed richness, with graft stage as a random effect
   mod9 <- nlme::lme(Observed ~ temp_treat, random = ~1|graft_stage, data = bact.rich.bee.M)
   stats::anova(mod9)
   
@@ -684,8 +684,6 @@
   OsmiaCC.Observed.bact.bee.F
 
 ## Evenness ----
-
-# Provisions with bees
   
 # Extract ASV counts per sample
   otu <- phyloseq::otu_table(ps6)
@@ -729,6 +727,54 @@
                                 scale_color_manual(values = climate.colors,
                                                    labels = climate.labs)
   OsmiaCC.Pielou.bact.bee
+  
+# Male bees
+  
+# Provisions with bees
+  ps.bact.evenness.M <- subset_samples(ps6, sex == "M")
+  
+# Extract ASV counts per sample
+  bact.otu.M <- phyloseq::otu_table(ps.bact.evenness.M)
+  
+# Calculate Shannon diversity index
+  bact.H.M <- vegan::diversity(bact.otu.M, index = "shannon")
+  
+# Calculate observed richness
+  bact.S.M <- vegan::specnumber(bact.otu.M)
+  
+# Calculate Pielou's evenness
+  bact.J.M <- bact.H.M/log(bact.S.M)
+  
+# Create df with diversity measures and metadata
+  bact.evenness.M <- cbind(shannon = bact.H.M, richness = bact.S.M, pielou = bact.J.M, sample_data(ps.bact.evenness.M))
+  bact.evenness.M
+  
+# Remove samples with NaNs
+  bact.evenness.M <- bact.evenness.M[complete.cases(bact.evenness.M), ]
+  
+# Examine the effects of temperature treatment and sex on evenness, with graft stage as a random effect
+  mod14 <- nlme::lme(pielou ~ temp_treat, random = ~1|graft_stage, data = bact.evenness.M)
+  stats::anova(mod14)
+  
+# Reorder x-axis
+  bact.evenness.M$combo_treat <- factor(bact.evenness.M$combo_treat, levels = c("CN", "AN",))
+  
+# Plot
+  OsmiaCC.Pielou.bact.bee.M <- ggplot(bact.evenness.M, aes(x = combo_treat, y = pielou, color = combo_treat)) +
+                                  geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                  geom_jitter(size = 1, alpha = 0.9) +
+                                  theme_bw() +
+                                  theme(legend.position = "none",
+                                        plot.title = element_text(hjust = -0.12)) +
+                                  theme(panel.grid.major = element_blank(),
+                                        panel.grid.minor = element_blank()) +
+                                  labs(title = bact.title) +
+                                  ylab("Pielou's Evenness") +
+                                  ylim(0, 1.0) +
+                                  xlab("Treatment") +
+                                  scale_color_manual(values = climate.colors,
+                                                     labels = climate.labs)
+  OsmiaCC.Pielou.bact.bee.M
   
 ## Beta diversity with relative abundance data ----
   
@@ -805,6 +851,10 @@
 # Do any of the group dispersions differ?
   disp.bact.an.combo <- stats::anova(disp.bact.combo)
   disp.bact.an.combo
+  
+# Calculate the average distance of group members to the group centroid
+  disp.bact.micro <- vegan::betadisper(bact.bray, sample.bact$micro_treat)
+  disp.bact.micro
   
 # Calculate the average distance of group members to the group centroid
   disp.bact.sex <- vegan::betadisper(bact.bray, sample.bact$sex)
@@ -1001,7 +1051,8 @@
   OsmiaCC.rare.bact.bee <- ggplot(rare.tidy.bact.bee, aes(x = Sample, y = Species, group = Site)) +
                               geom_line() +
                               theme_bw() +
-                              theme(plot.title = element_text(hjust = -0.07)) +
+                              theme(text = element_text(size = 10)) +
+                              theme(plot.title = element_text(hjust = -0.11)) +
                               theme(panel.grid.major = element_blank(),
                                     panel.grid.minor = element_blank()) +
                               labs(title = bact.title) + 
@@ -1451,10 +1502,12 @@
   
 # Kruskal-Wallis test
   stats::kruskal.test(rel_abund ~ combo_treat, data = arseno)
-
+  stats::kruskal.test(rel_abund ~ temp_treat, data = arseno)
+  stats::kruskal.test(rel_abund ~ sex, data = arseno)
+  
 # Reorder x-axis
   arseno$combo_treat <- factor(arseno$combo_treat, levels = c("CN", "AN","WN"))
-  
+
 # Plot
   arseno.rel.abund <- ggplot(arseno, aes(x = combo_treat, y = rel_abund, color = combo_treat)) + 
                           geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +

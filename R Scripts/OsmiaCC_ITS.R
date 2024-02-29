@@ -769,6 +769,54 @@
                                                   labels = climate.labs)
   OsmiaCC.Pielou.fung.bee
 
+# Male bees
+  
+# Provisions with bees
+  ps.fung.evenness.M <- subset_samples(ps14, sex == "M")
+  
+# Extract ASV counts per sample
+  fung.otu.M <- phyloseq::otu_table(ps.fung.evenness.M)
+  
+# Calculate Shannon diversity index
+  fung.H.M <- vegan::diversity(fung.otu.M, index = "shannon")
+  
+# Calculate observed richness
+  fung.S.M <- vegan::specnumber(fung.otu.M)
+  
+# Calculate Pielou's evenness
+  fung.J.M <- fung.H.M/log(fung.S.M)
+  
+# Create df with diversity measures and metadata
+  fung.evenness.M <- cbind(shannon = fung.H.M, richness = fung.S.M, pielou = fung.J.M, sample_data(ps.fung.evenness.M))
+  fung.evenness.M
+  
+# Remove samples with NaNs
+  fung.evenness.M <- fung.evenness.M[complete.cases(fung.evenness.M), ]
+  
+# Examine the effects of temperature treatment and sex on evenness, with graft stage as a random effect
+  mod27 <- nlme::lme(pielou ~ temp_treat + micro_treat, random = ~1|graft_stage, data = fung.evenness.M)
+  stats::anova(mod27)
+  
+# Reorder x-axis
+  fung.evenness.M$combo_treat <- factor(fung.evenness.M$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
+  
+# Plot
+  OsmiaCC.Pielou.fung.bee.M <- ggplot(fung.evenness.M, aes(x = combo_treat, y = pielou, color = combo_treat)) +
+                                  geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
+                                  geom_jitter(size = 1, alpha = 0.9) +
+                                  theme_bw() +
+                                  theme(plot.title = element_text(hjust = -0.12)) +
+                                  theme(panel.grid.major = element_blank(),
+                                        panel.grid.minor = element_blank()) +
+                                  labs(title = fung.title) +
+                                  ylab("Pielou's Evenness") +
+                                  ylim(0, 1.0) +
+                                  xlab("Treatment") +
+                                  scale_color_manual(name = "Treatment",
+                                                     values = climate.colors,
+                                                     labels = climate.labs)
+  OsmiaCC.Pielou.fung.bee.M
+  
 ## Beta diversity with relative abundance data ----
   
 # Provisions with and without bees
@@ -863,6 +911,14 @@
   disp.fung.tHSD.combo <- stats::TukeyHSD(disp.fung.combo)
   disp.fung.tHSD.combo
   
+# Calculate the average distance of group members to the group centroid
+  disp.fung.micro <- vegan::betadisper(fung.bray, sample.fung$micro_treat)
+  disp.fung.micro
+  
+# Do any of the group dispersions differ?
+  disp.fung.an.micro <- stats::anova(disp.fung.micro)
+  disp.fung.an.micro
+
 # Calculate the average distance of group members to the group centroid
   disp.fung.type <- vegan::betadisper(fung.bray, sample.fung$sample_type)
   disp.fung.type
@@ -1065,7 +1121,8 @@
   OsmiaCC.rare.fung.bee <- ggplot(rare.tidy.fungi, aes(x = Sample, y = Species, group = Site)) +
                             geom_line() +
                             theme_bw() +
-                            theme(plot.title = element_text(hjust = -0.07)) +
+                            theme(text = element_text(size = 10)) +
+                            theme(plot.title = element_text(hjust = -0.11)) +
                             theme(panel.grid.major = element_blank(),
                                   panel.grid.minor = element_blank()) +
                             labs(title = fung.title) + 

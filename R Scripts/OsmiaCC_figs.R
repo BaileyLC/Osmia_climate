@@ -13,7 +13,7 @@
   library(ggplot2) # Version 3.4.3
   library(patchwork) # Version 1.1.3
 
-### Treatments ----
+### Climate treatments ----
 
 # Save plot
   ggsave("OsmiaCC_treatments.png", plot = treats, width = 10, height = 4, units = "in")
@@ -48,7 +48,7 @@
 ## Only male bees that did not die within 48 h
   
 # Save plot
-  ggsave("OsmiaCC_KP_M_48.png", plot = OsmiaCC.KP.M.48, width = 6, height = 4, unit = "in")
+  ggsave("OsmiaCC_KP_M_48.png", plot = OsmiaCC.KP.M.48, width = 5, height = 3, unit = "in")
   
 ## All female bees
   
@@ -98,7 +98,7 @@
 # Save plot  
   ggsave("OsmiaCC_Shannon_bee_F.png", plot = OsmiaCC.Shannon.bee.F, width = 10, height = 4, units = "in")
   
-### Simpson Index ----  
+### Simpson Index ----
   
 ## Provisions without bees
 
@@ -185,8 +185,17 @@
 # Save plot
   ggsave("OsmiaCC_Pielou_bee.png", plot = OsmiaCC.Pielou.bee, width = 10, height = 4, units = "in")
 
-### PCoA with relative abundance data ----  
+## Male bees
   
+# Create plot
+  OsmiaCC.Pielou.M <- OsmiaCC.Pielou.bact.bee.M + OsmiaCC.Pielou.fung.bee.M + plot_layout(ncol = 2, nrow = 1)
+  OsmiaCC.Pielou.M
+  
+# Save plot
+  ggsave("OsmiaCC_Pielou_bee_M.png", plot = OsmiaCC.Pielou.M, width = 10, height = 4, units = "in")
+  
+### PCoA with relative abundance data ----  
+
 ## Provisions with and without bees
   
 # Create plot
@@ -241,7 +250,7 @@
   OsmiaCC.rare.bee
   
 # Save plot
-  ggsave("OsmiaCC_rare_bee.png", plot = OsmiaCC.rare.bee, width = 8, height = 5, units = "in")
+  ggsave("OsmiaCC_rare_bee.png", plot = OsmiaCC.rare.bee, width = 5, height = 5, units = "in")
   
 ### PCoA with rarefied data  
 

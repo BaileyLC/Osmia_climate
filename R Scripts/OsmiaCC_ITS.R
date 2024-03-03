@@ -180,6 +180,10 @@
   ps.sub <- phyloseq::subset_samples(ps.noncontam, sample_or_control != "control")
   ps.sub
   
+# Remove samples that weren't identified to Family
+  ps.sub <- phyloseq::subset_taxa(ps.sub, Family != "NA")
+  ps.sub
+  
 # Remove samples without any reads
   ps11 <- phyloseq::prune_samples(sample_sums(ps.sub) != 0, ps.sub)
   ps11
@@ -191,8 +195,8 @@
   ps11.relabund <- phyloseq::transform_sample_counts(ps11, function(x) x/sum(x))
   
 # Save taxonomy, raw reads, and relative abundance data
-  write.csv(tax_table(ps11), "OsmiaCC_ITStaxa_all.csv")
-  write.csv(otu_table(ps11), "OsmiaCC_ITSotu_all.csv")
+  write.csv(tax_table(ps11), "OsmiaCC_ITStaxa.csv")
+  write.csv(otu_table(ps11), "OsmiaCC_ITSotu.csv")
   write.csv(otu_table(ps11.relabund), "OsmiaCC_ITS_relabund.csv")
   
 # Subset provisions collected before and after homogenization
@@ -351,16 +355,6 @@
   mod14 <- stats::aov(Shannon ~ temp_treat, data = fung.rich.NoBee)
   stats::anova(mod14)
   
-# Post-hoc test
-  TukeyHSD(mod14)
-  
-# Save p-values  
-  stats.mod14 <- tibble::tribble(
-                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                   "WN",     "CN",    0.036,      "*"
-                               )
-  stats.mod14
-  
 # Examine the effect of temperature on Simpson diversity
   mod15 <- aov(Simpson ~ temp_treat, data = fung.rich.NoBee)
   stats::anova(mod15)
@@ -386,11 +380,7 @@
                                   labs(title = fung.title) + 
                                   xlab("Treatment") +
                                   ylab("Shannon index") +
-                                  ylim(0, 4) +
-                                  ggpubr::stat_pvalue_manual(stats.mod14,
-                                                             label = "p.adj.signif",
-                                                             y.position = 3,
-                                                             tip.length = 0.01)
+                                  ylim(0, 4)
   OsmiaCC.Shannon.fung.NoBee
   
 # Boxplot of Simpson index
@@ -450,24 +440,40 @@
   mod17 <- nlme::lme(Shannon ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
   stats::anova(mod17)
   
-# Post-hoc tests  
-  emmeans(mod17, pairwise ~ sex, adjust = "tukey")
-  emmeans(mod17, pairwise ~ micro_treat, adjust = "tukey")
+# Post-hoc tests
+  emmeans(mod17, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
+  
+# Save p-values  
+  stats.mod17 <- tibble::tribble(
+                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                   "AS",     "AN",    0.0351,      "*",
+                                   "AN",     "WS",    0.0078,      "**",
+                                   "CN",     "CS",    0.0351,      "*",
+                                   "CN",     "WS",    0.0192,      "*"
+                              )
+  stats.mod17
   
 # Examine the effects of sex, temperature, and microbiome treatment on Simpson diversity, with graft stage as a random effect
   mod18 <- nlme::lme(Simpson ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
   stats::anova(mod18)
   
-# Post-hoc tests  
-  emmeans(mod18, pairwise ~ sex, adjust = "tukey")
-  emmeans(mod18, pairwise ~ micro_treat, adjust = "tukey")
+# Post-hoc tests
+  emmeans(mod18, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
+  
+# Save p-values  
+  stats.mod18 <- tibble::tribble(
+                                  ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
+                                    "AN",     "WS",    0.0206,      "*",
+                                    "CN",     "WS",    0.0403,      "*"
+                                )
+  stats.mod18
   
 # Examine the effects of sex, temperature, and microbiome treatment on observed richness, with graft stage as a random effect
   mod19 <- nlme::lme(Observed ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
   stats::anova(mod19)
   
 # Post-hoc tests
-  emmeans(mod19, pairwise ~ micro_treat, adjust = "tukey")
+  emmeans(mod19, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
   
 # Reorder x-axis
   fung.rich.bee$combo_treat <- factor(fung.rich.bee$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -476,9 +482,6 @@
   OsmiaCC.Shannon.fung.bee <- ggplot(fung.rich.bee, aes(x = combo_treat, y = Shannon, color = combo_treat)) + 
                                 geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                 geom_jitter(size = 1, alpha = 0.9) +
-                                facet_grid(~ sex, 
-                                           scale = "free", 
-                                           space = "free") +
                                 theme_bw() +
                                 theme(plot.title = element_text(hjust = -0.12)) +
                                 theme(panel.grid.major = element_blank(),
@@ -489,16 +492,18 @@
                                 labs(title = fung.title) +
                                 xlab("Treatment") +
                                 ylab("Shannon index") +
-                                ylim(0, 3)
+                                ylim(0, 5)
+                                ggpubr::stat_pvalue_manual(stats.mod17,
+                                                           label = "p.adj.signif",
+                                                           y.position = 4,
+                                                           step.increase = 0.1,
+                                                           tip.length = 0.01)
   OsmiaCC.Shannon.fung.bee
   
 # Boxplot of Simpson index
   OsmiaCC.Simpson.fung.bee <- ggplot(fung.rich.bee, aes(x = combo_treat, y = Simpson, color = combo_treat)) + 
                                   geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                   geom_jitter(size = 1, alpha = 0.9) +
-                                  facet_grid(~ sex, 
-                                             scale = "free", 
-                                             space = "free") +
                                   theme_bw() +
                                   theme(plot.title = element_text(hjust = -0.12)) +
                                   theme(panel.grid.major = element_blank(),
@@ -509,16 +514,18 @@
                                   labs(title = fung.title) + 
                                   xlab("Treatment") +
                                   ylab("Simpson index") +
-                                  ylim(0, 1.0)
+                                  ylim(0, 1.0) +
+                                  ggpubr::stat_pvalue_manual(stats.mod18,
+                                                             label = "p.adj.signif",
+                                                             y.position = 0.9,
+                                                             step.increase = 0.1,
+                                                             tip.length = 0.01)
   OsmiaCC.Simpson.fung.bee
   
 # Boxplot of Observed richness
   OsmiaCC.Observed.fung.bee <- ggplot(fung.rich.bee, aes(x = combo_treat, y = Observed, color = combo_treat)) + 
                                   geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                   geom_jitter(size = 1, alpha = 0.9) +
-                                  facet_grid(~ sex, 
-                                             scale = "free", 
-                                             space = "free") +
                                   theme_bw() +
                                   theme(plot.title = element_text(hjust = -0.12)) +
                                   theme(panel.grid.major = element_blank(),
@@ -542,14 +549,16 @@
   stats::anova(mod20)
   
 # Post-hoc test  
-  emmeans(mod20, pairwise ~ micro_treat | temp_treat, adjust = "tukey")
+  emmeans(mod20, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
   
 # Save p-values  
   stats.mod20 <- tibble::tribble(
                                  ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                   "CS",     "CN",    0.0001,      "***",
-                                   "AS",     "AN",    0.0001,      "***",
-                                   "WS",     "WN",    0.0001,      "***"
+                                   "AN",     "AS",    0.0400,       "*",
+                                   "AN",     "WS",    0.0211,       "*",
+                                   "CN",     "CS",    0.0400,       "*",
+                                   "CN",     "WS",    0.0346,       "*",
+                                   "WN",     "WS",    0.0400,       "*"
                               )
   stats.mod20
   
@@ -558,32 +567,11 @@
   stats::anova(mod21)
   
 # Post-hoc test  
-  emmeans(mod21, pairwise ~ micro_treat | temp_treat, adjust = "tukey")
-  
-# Save p-values  
-  stats.mod21 <- tibble::tribble(
-                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                   "CS",     "CN",    0.0001,      "***",
-                                   "AS",     "AN",    0.0001,      "***",
-                                   "WS",     "WN",    0.0001,      "***"
-                              )
-  stats.mod21  
+  emmeans(mod21, pairwise ~ micro_treat + temp_treat, adjust = "tukey")
   
 # Examine the effect of temperature and microbiome treatment on Observed richness, with graft stage as a random effect
   mod22 <- nlme::lme(Observed ~ temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee.M)
   stats::anova(mod22)
-  
-# Post-hoc test  
-  emmeans(mod22, pairwise ~ micro_treat | temp_treat, adjust = "tukey")
-  
-# Save p-values  
-  stats.mod22 <- tibble::tribble(
-                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                   "CS",     "CN",    0.040,      "*",
-                                   "AS",     "AN",    0.040,      "*",
-                                   "WS",     "WN",    0.040,      "*"
-                              )
-  stats.mod22
   
 # Reorder x-axis
   fung.rich.bee.M$combo_treat <- factor(fung.rich.bee.M$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -605,7 +593,8 @@
                                     ylim(0, 4) + 
                                     ggpubr::stat_pvalue_manual(stats.mod20,
                                                                label = "p.adj.signif",
-                                                               y.position = 3.5,
+                                                               step.increase = 0.1,
+                                                               y.position = 3,
                                                                tip.length = 0.01)
   OsmiaCC.Shannon.fung.bee.M
   
@@ -623,11 +612,7 @@
                                     labs(title = fung.title) + 
                                     xlab("Treatment") +
                                     ylab("Simpson index") +
-                                    ylim(0, 1.0) +
-                                    ggpubr::stat_pvalue_manual(stats.mod21,
-                                                               label = "p.adj.signif",
-                                                               y.position = 0.95,
-                                                               tip.length = 0.01)
+                                    ylim(0, 1.0)
   OsmiaCC.Simpson.fung.bee.M
   
 # Boxplot of Observed richness
@@ -644,11 +629,7 @@
                                     labs(title = fung.title) +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
-                                    ylim(0, 70) +
-                                    ggpubr::stat_pvalue_manual(stats.mod22,
-                                                               label = "p.adj.signif",
-                                                               y.position = 65,
-                                                               tip.length = 0.01)
+                                    ylim(0, 70)
   OsmiaCC.Observed.fung.bee.M
   
 # Provisions with bees - females
@@ -753,9 +734,6 @@
   OsmiaCC.Pielou.fung.bee <- ggplot(fung.evenness, aes(x = combo_treat, y = pielou, color = combo_treat)) +
                                 geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                 geom_jitter(size = 1, alpha = 0.9) +
-                                facet_grid(~ sex, 
-                                           scale = "free", 
-                                           space = "free") +
                                 theme_bw() +
                                 theme(plot.title = element_text(hjust = -0.12)) +
                                 theme(panel.grid.major = element_blank(),
@@ -838,14 +816,6 @@
   fung.perm.combo.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray, sample.fung$combo_treat, p.method = "BH")
   fung.perm.combo.BH
   
-# Follow up with pairwise comparisons - which sample types differ?
-  fung.perm.micro.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray, sample.fung$micro_treat, p.method = "BH")
-  fung.perm.micro.BH
-  
-# Follow up with pairwise comparisons - which sample types differ?
-  fung.perm.type.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray, sample.fung$sample_type, p.method = "BH")
-  fung.perm.type.BH
-  
 # Provisions without bees
   
 # Calculate the relative abundance of each otu  
@@ -877,8 +847,8 @@
   fung.perm.bee
   
 # Follow up with pairwise comparisons - which sample types differ?
-  fung.perm.bee.micro.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.bee, sample.fung.bee$micro_treat, p.method = "BH")
-  fung.perm.bee.micro.BH
+  fung.perm.bee.combo.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.bee, sample.fung.bee$combo_treat, p.method = "BH")
+  fung.perm.bee.combo.BH
 
 # Set permutations to deal with graft stage
   perm.relabund <- permute::how(within = Within(type = "free"),
@@ -892,8 +862,8 @@
   fung.perm.bee.graft
   
 # Follow up with pairwise comparisons - which sample types differ?
-  fung.perm.bee.micro.perm.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.bee, sample.fung.bee$micro_treat, p.method = "BH")
-  fung.perm.bee.micro.perm.BH
+  fung.perm.bee.combo.BH.graft <- RVAideMemoire::pairwise.perm.manova(fung.bray.bee, sample.fung.bee$combo_treat, p.method = "BH")
+  fung.perm.bee.combo.BH.graft
   
 ## Test for homogeneity of multivariate dispersion with relative abundance data ----
   
@@ -910,22 +880,6 @@
 # Which group dispersions differ?
   disp.fung.tHSD.combo <- stats::TukeyHSD(disp.fung.combo)
   disp.fung.tHSD.combo
-  
-# Calculate the average distance of group members to the group centroid
-  disp.fung.micro <- vegan::betadisper(fung.bray, sample.fung$micro_treat)
-  disp.fung.micro
-  
-# Do any of the group dispersions differ?
-  disp.fung.an.micro <- stats::anova(disp.fung.micro)
-  disp.fung.an.micro
-
-# Calculate the average distance of group members to the group centroid
-  disp.fung.type <- vegan::betadisper(fung.bray, sample.fung$sample_type)
-  disp.fung.type
-  
-# Do any of the group dispersions differ?
-  disp.fung.an.type <- stats::anova(disp.fung.type)
-  disp.fung.an.type
 
 # Provisions without bees  
   
@@ -950,35 +904,7 @@
 # Which group dispersions differ?
   disp.fung.tHSD.combo <- stats::TukeyHSD(disp.fung.bee.combo)
   disp.fung.tHSD.combo
-  
-# Calculate the average distance of group members to the group centroid
-  disp.fung.bee.temp <- vegan::betadisper(fung.bray.bee, sample.fung.bee$temp_treat)
-  disp.fung.bee.temp
-  
-# Do any of the group dispersions differ?  
-  disp.fung.an.bee.temp <- stats::anova(disp.fung.bee.temp)
-  disp.fung.an.bee.temp
-  
-# Calculate the average distance of group members to the group centroid
-  disp.fung.bee.micro <- vegan::betadisper(fung.bray.bee, sample.fung.bee$micro_treat)
-  disp.fung.bee.micro
-  
-# Do any of the group dispersions differ?  
-  disp.fung.an.bee.micro <- stats::anova(disp.fung.bee.micro)
-  disp.fung.an.bee.micro
-  
-# Which group dispersions differ?
-  disp.fung.tHSD.bee.micro <- stats::TukeyHSD(disp.fung.bee.micro)
-  disp.fung.tHSD.bee.micro
-  
-# Calculate the average distance of group members to the group centroid
-  disp.fung.bee.sex <- vegan::betadisper(fung.bray.bee, sample.fung.bee$sex)
-  disp.fung.bee.sex
-  
-# Do any of the group dispersions differ?  
-  disp.fung.an.bee.sex <- stats::anova(disp.fung.bee.sex)
-  disp.fung.an.bee.sex
-  
+
 ## Ordination with relative abundance data ----
   
 # Provisions with and without bees
@@ -992,13 +918,10 @@
 # Plot ordination
   OsmiaCC.PCoA.fung <- plot_ordination(ps.prop.fung, ord.pcoa.bray.fung, color = "combo_treat", shape = "sample_type") + 
                           theme_bw() +
-                          theme(plot.title = element_text(hjust = -0.3)) +
+                          theme(plot.title = element_text(hjust = -0.15)) +
                           theme(panel.grid.major = element_blank(),
                                 panel.grid.minor = element_blank()) +
-                          theme(text = element_text(size = 16)) +
-                          theme(legend.justification = "left", 
-                                legend.title = element_text(size = 16, colour = "black"), 
-                                legend.text = element_text(size = 14, colour = "black")) + 
+                          theme(legend.justification = "left") + 
                           geom_point(size = 3) +
                           scale_color_manual(values = climate.colors) +
                           labs(title = fung.title,
@@ -1039,7 +962,7 @@
   sample_data(ps.prop.fung.bee)$combo_treat <- factor(sample_data(ps.prop.fung.bee)$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Plot ordination
-  OsmiaCC.PCoA.fung.bee <- plot_ordination(ps.prop.fung.bee, ord.pcoa.fung.bee, color = "combo_treat", shape = "sex") + 
+  OsmiaCC.PCoA.fung.bee <- plot_ordination(ps.prop.fung.bee, ord.pcoa.fung.bee, color = "combo_treat") + 
                               theme_bw() +
                               theme(plot.title = element_text(hjust = -0.25)) +
                               theme(text = element_text(size = 16)) +
@@ -1132,7 +1055,7 @@
 
 # Rarefy
   set.seed(1234)
-  rareps.fung.bee <- rarefy_even_depth(ps14, sample.size = 25)
+  rareps.fung.bee <- rarefy_even_depth(ps14, sample.size = 18)
   
 ## Beta diversity with rarefied data ----  
   
@@ -1148,10 +1071,6 @@
   fung.perm.rare.bee <- vegan::adonis2(fung.bray.rare.bee ~ temp_treat + micro_treat + sex, data = sample.fung.rare.bee)
   fung.perm.rare.bee
   
-# Follow up with pairwise comparisons - which sample types differ?
-  fung.perm.rare.bee.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.rare.bee, sample.fung.rare.bee$micro_treat, p.method = "BH")
-  fung.perm.rare.bee.BH
-  
 # Set permutations to deal with graft stage
   perm.rare.bee <- permute::how(within = Within(type = "free"),
                                 plots = Plots(type = "none"),
@@ -1162,10 +1081,6 @@
 # Perform the PERMANOVA to test effects of temperature, microbiome, and sex on fungal community composition, using graft stage as a random effect
   fung.perm.rare.bee.graft <- vegan::adonis2(fung.bray.rare.bee ~ temp_treat + micro_treat + sex, permutations = perm.rare.bee, data = sample.fung.rare.bee)
   fung.perm.rare.bee.graft
-  
-# Follow up with pairwise comparisons - which sample types differ?
-  fung.perm.rare.bee.graft.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.rare.bee, sample.fung.rare.bee$micro_treat, p.method = "BH")
-  fung.perm.rare.bee.graft.BH
 
 ## Test for homogeneity of multivariate dispersion with rarefied data ----
   
@@ -1182,30 +1097,6 @@
 # Which group dispersions differ?
   disp.fung.tHSD.rare.bee.combo <- stats::TukeyHSD(disp.fung.rare.bee.combo)
   disp.fung.tHSD.rare.bee.combo
-  
-# Calculate the average distance of group members to the group centroid
-  disp.fung.rare.bee.temp <- vegan::betadisper(fung.bray.rare.bee, sample.fung.rare.bee$temp_treat)
-  disp.fung.rare.bee.temp
-  
-# Do any of the group dispersions differ?  
-  disp.fung.an.rare.bee.temp <- stats::anova(disp.fung.rare.bee.temp)
-  disp.fung.an.rare.bee.temp
-  
-# Calculate the average distance of group members to the group centroid
-  disp.fung.rare.bee.micro <- vegan::betadisper(fung.bray.rare.bee, sample.fung.rare.bee$micro_treat)
-  disp.fung.rare.bee.micro
-  
-# Do any of the group dispersions differ?  
-  disp.fung.an.rare.bee.micro <- stats::anova(disp.fung.rare.bee.micro)
-  disp.fung.an.rare.bee.micro
-  
-# Calculate the average distance of group members to the group centroid
-  disp.fung.rare.bee.sex <- vegan::betadisper(fung.bray.rare.bee, sample.fung.rare.bee$sex)
-  disp.fung.rare.bee.sex
-  
-# Do any of the group dispersions differ?  
-  disp.fung.an.rare.bee.sex <- stats::anova(disp.fung.rare.bee.sex)
-  disp.fung.an.rare.bee.sex
 
 ## Ordination with rarefaction data ----
 
@@ -1221,7 +1112,7 @@
   sample_data(ps.prop.fung.rare.bee)$combo_treat <- factor(sample_data(ps.prop.fung.rare.bee)$combo_treat, levels = c("CN", "AN", "WN"))
   
 # Plot ordination
-  OsmiaCC.PCoA.fung.rare.bee <- plot_ordination(ps.prop.fung.rare.bee, ord.pcoa.bray.fung.rare.bee, color = "combo_treat", shape = "sex") + 
+  OsmiaCC.PCoA.fung.rare.bee <- plot_ordination(ps.prop.fung.rare.bee, ord.pcoa.bray.fung.rare.bee, color = "combo_treat") + 
                                     theme_bw() +
                                     theme(plot.title = element_text(hjust = -0.25)) +
                                     theme(text = element_text(size = 16)) +
@@ -1421,7 +1312,7 @@
                                     plot.title = element_text(hjust = -2.0)) +
                               ylab("Relative abundance") + 
                               ylim(0, 1.0) +
-                              xlab("Treatment") +
+                              xlab("Sample") +
                               theme_bw() + 
                               theme(text = element_text(size = 16)) +
                               theme(panel.grid.major = element_blank(), 
@@ -1429,7 +1320,7 @@
                               theme(legend.justification = "left", 
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
-                              guides(fill = guide_legend(ncol = 3)) +
+                              guides(fill = guide_legend(ncol = 1)) +
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               theme(panel.spacing.x = unit(0.1, "lines")) +
                               labs(fill = "Genera",

@@ -453,7 +453,7 @@
   stats::anova(mod6)
   
 # Post-hoc test  
-  emmeans(mod6, pairwise ~ sex, adjust = "tukey")
+  emmeans(mod6, pairwise ~ sex + temp_treat, adjust = "tukey")
   
 # Reorder x-axis
   bact.rich.bee$combo_treat <- factor(bact.rich.bee$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -544,7 +544,7 @@
 # Save p-values  
   stats.mod9 <- tibble::tribble(
                                 ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                   "CN",     "WN",    0.045,      "*"
+                                   "CN",     "WN",   0.0451,      "*"
                               )
   stats.mod9
   
@@ -713,9 +713,6 @@
                                 geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                 geom_jitter(size = 1, alpha = 0.9) +
                                 theme_bw() +
-                                facet_grid(~ sex,
-                                           scale = "free", 
-                                           space = "free") +
                                 theme(legend.position = "none",
                                       plot.title = element_text(hjust = -0.12)) +
                                 theme(panel.grid.major = element_blank(),
@@ -851,27 +848,7 @@
 # Do any of the group dispersions differ?
   disp.bact.an.combo <- stats::anova(disp.bact.combo)
   disp.bact.an.combo
-  
-# Calculate the average distance of group members to the group centroid
-  disp.bact.micro <- vegan::betadisper(bact.bray, sample.bact$micro_treat)
-  disp.bact.micro
-  
-# Calculate the average distance of group members to the group centroid
-  disp.bact.sex <- vegan::betadisper(bact.bray, sample.bact$sex)
-  disp.bact.sex
-  
-# Do any of the group dispersions differ?
-  disp.bact.an.sex <- stats::anova(disp.bact.sex)
-  disp.bact.an.sex
-  
-# Calculate the average distance of group members to the group centroid
-  disp.bact.type <- vegan::betadisper(bact.bray, sample.bact$sample_type)
-  disp.bact.type
-  
-# Do any of the group dispersions differ?
-  disp.bact.an.type <- stats::anova(disp.bact.type)
-  disp.bact.an.type
-  
+
 # Provisions without bees  
   
 # Calculate the average distance of group members to the group centroid
@@ -895,14 +872,6 @@
 # Do any of the group dispersions differ?
   disp.bact.an.bee.combo <- stats::anova(disp.bact.bee.combo)
   disp.bact.an.bee.combo
-  
-# Calculate the average distance of group members to the group centroid
-  disp.bact.bee.temp <- vegan::betadisper(bact.bray.bee, sample.bact.bee$temp_treat)
-  disp.bact.bee.temp
-  
-# Do any of the group dispersions differ?  
-  disp.bact.an.bee.temp <- stats::anova(disp.bact.bee.temp)
-  disp.bact.an.bee.temp
 
 ## Ordination with relative abundance data ----  
   
@@ -918,13 +887,10 @@
   OsmiaCC.PCoA.bact <- plot_ordination(ps.prop.bact, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
                           theme_bw() +
                           theme(legend.position = "none",
-                                plot.title = element_text(hjust = -0.3)) +
-                          theme(text = element_text(size = 16)) +
+                                plot.title = element_text(hjust = -0.15)) +
                           theme(panel.grid.major = element_blank(),
                                 panel.grid.minor = element_blank()) +
-                          theme(legend.justification = "left", 
-                                legend.title = element_text(size = 16, colour = "black"), 
-                                legend.text = element_text(size = 14, colour = "black")) + 
+                          theme(legend.justification = "left") + 
                           geom_point(size = 3) +
                           scale_color_manual(values = climate.colors) +
                           labs(title = bact.title,
@@ -1079,10 +1045,6 @@
   bact.perm.rare.bee
   
 # Follow up with pairwise comparisons - which sample types differ?
-  bact.perm.rare.bee.temp.BH <- RVAideMemoire::pairwise.perm.manova(bact.bray.rare.bee, sample.bact.rare.bee$temp_treat, p.method = "BH")
-  bact.perm.rare.bee.temp.BH
-  
-# Follow up with pairwise comparisons - which sample types differ?
   bact.perm.rare.bee.sex.BH <- RVAideMemoire::pairwise.perm.manova(bact.bray.rare.bee, sample.bact.rare.bee$sex, p.method = "BH")
   bact.perm.rare.bee.sex.BH
   
@@ -1096,11 +1058,7 @@
 # Perform the PERMANOVA to test effects of temperature and sex on bacterial community composition, with graft stage as a random effect
   bact.perm.rare.bee.graft <- vegan::adonis2(bact.bray.rare.bee ~ temp_treat + sex, permutations = perm.rare.bee, data = sample.bact.rare.bee)
   bact.perm.rare.bee.graft
-  
-# Follow up with pairwise comparisons - which sample types differ?
-  bact.perm.rare.bee.temp.BH.graft <- RVAideMemoire::pairwise.perm.manova(bact.bray.rare.bee, sample.bact.rare.bee$temp_treat, p.method = "BH")
-  bact.perm.rare.bee.temp.BH.graft
-  
+
 # Follow up with pairwise comparisons - which sample types differ?
   bact.perm.rare.bee.sex.BH.graft <- RVAideMemoire::pairwise.perm.manova(bact.bray.rare.bee, sample.bact.rare.bee$sex, p.method = "BH")
   bact.perm.rare.bee.sex.BH.graft
@@ -1116,14 +1074,6 @@
 # Do any of the group dispersions differ?
   disp.bact.an.rare.bee.combo <- stats::anova(disp.bact.rare.bee.combo)
   disp.bact.an.rare.bee.combo
-  
-# Calculate the average distance of group members to the group centroid: combo_treat
-  disp.bact.rare.bee.sex <- vegan::betadisper(bact.bray.rare.bee, sample.bact.rare.bee$sex)
-  disp.bact.rare.bee.sex
-  
-  # Do any of the group dispersions differ?
-  disp.bact.an.rare.bee.sex <- stats::anova(disp.bact.rare.bee.sex)
-  disp.bact.an.rare.bee.sex
   
 ## Ordination with rarefied data ----
   
@@ -1358,7 +1308,7 @@
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               theme(panel.spacing.x = unit(0.1, "lines")) +
-                              guides(fill = guide_legend(ncol = 3)) +
+                              guides(fill = guide_legend(ncol = 1)) +
                               labs(fill = "Genera",
                                    title = bact.title)
   OsmiaCC.gen.bact.bee

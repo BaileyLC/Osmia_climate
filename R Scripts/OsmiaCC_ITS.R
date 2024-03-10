@@ -2,7 +2,7 @@
 
 #### Ownership: Bailey Crowley & Robert N. Schaeffer
 
-### Purpose: Analysis of ITS data
+### Purpose: Analysis of ITS rRNA gene data
 
 ## Prepare work space ----
 
@@ -417,7 +417,7 @@
                                     ylim(0, 25)
   OsmiaCC.Observed.fung.NoBee
   
-# Provisions with bees  
+# Provisions with bees
   
 # Estimate richness and alpha diversity
   fung.rich.bee <- phyloseq::estimate_richness(ps14, split = TRUE, measures = c("Shannon", "Simpson", "Observed"))
@@ -438,12 +438,13 @@
   
 # Examine the effects of sex, temperature, and microbiome treatment on Shannon diversity, with graft stage as a random effect
   mod17 <- nlme::lme(Shannon ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
+  summary(mod17)
   stats::anova(mod17)
   
 # Post-hoc tests
-  emmeans(mod17, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
+  emmeans(mod17, pairwise ~ sex + temp_treat + micro_treat, adjust = "tukey")
   
-# Save p-values  
+# Save p-values
   stats.mod17 <- tibble::tribble(
                                  ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
                                    "AS",     "AN",    0.0351,      "*",
@@ -455,6 +456,7 @@
   
 # Examine the effects of sex, temperature, and microbiome treatment on Simpson diversity, with graft stage as a random effect
   mod18 <- nlme::lme(Simpson ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
+  summary(mod18)
   stats::anova(mod18)
   
 # Post-hoc tests
@@ -470,10 +472,11 @@
   
 # Examine the effects of sex, temperature, and microbiome treatment on observed richness, with graft stage as a random effect
   mod19 <- nlme::lme(Observed ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.rich.bee)
+  summary(mod19)
   stats::anova(mod19)
   
 # Post-hoc tests
-  emmeans(mod19, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
+  emmeans(mod19, pairwise ~ temp_treat + micro_treat + sex, adjust = "tukey")
   
 # Reorder x-axis
   fung.rich.bee$combo_treat <- factor(fung.rich.bee$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -491,11 +494,11 @@
                                                    labels = climate.labs) +
                                 labs(title = fung.title) +
                                 xlab("Treatment") +
-                                ylab("Shannon index") +
-                                ylim(0, 5)
+                                ylab("") +
+                                ylim(0, 4) +
                                 ggpubr::stat_pvalue_manual(stats.mod17,
                                                            label = "p.adj.signif",
-                                                           y.position = 4,
+                                                           y.position = 3,
                                                            step.increase = 0.1,
                                                            tip.length = 0.01)
   OsmiaCC.Shannon.fung.bee
@@ -535,7 +538,7 @@
                                                      labels = climate.labs) +
                                   labs(title = fung.title) +
                                   xlab("Treatment") +
-                                  ylab("Observed richness") +
+                                  ylab("") +
                                   ylim(0, 70)
   OsmiaCC.Observed.fung.bee
   
@@ -728,7 +731,11 @@
   
 # Examine the effects of sex, temperature, and microbiome treatment on evenness, with graft stage as a random effect
   mod26 <- nlme::lme(pielou ~ sex + temp_treat + micro_treat, random = ~1|graft_stage, data = fung.evenness)
+  summary(mod26)
   stats::anova(mod26)
+  
+# Reorder x-axis
+  fung.evenness$combo_treat <- factor(fung.evenness$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
   
 # Plot
   OsmiaCC.Pielou.fung.bee <- ggplot(fung.evenness, aes(x = combo_treat, y = pielou, color = combo_treat)) +
@@ -739,7 +746,7 @@
                                 theme(panel.grid.major = element_blank(),
                                       panel.grid.minor = element_blank()) +
                                 labs(title = fung.title) +
-                                ylab("Pielou's Evenness") +
+                                ylab("") +
                                 ylim(0, 1.0) +
                                 xlab("") +
                                 scale_color_manual(name = "Treatment",
@@ -847,8 +854,8 @@
   fung.perm.bee
   
 # Follow up with pairwise comparisons - which sample types differ?
-  fung.perm.bee.combo.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.bee, sample.fung.bee$combo_treat, p.method = "BH")
-  fung.perm.bee.combo.BH
+  fung.perm.bee.micro.BH <- RVAideMemoire::pairwise.perm.manova(fung.bray.bee, sample.fung.bee$micro_treat, p.method = "BH")
+  fung.perm.bee.micro.BH
 
 # Set permutations to deal with graft stage
   perm.relabund <- permute::how(within = Within(type = "free"),
@@ -974,8 +981,7 @@
                               geom_point(size = 3) +
                               scale_color_manual(values = climate.colors) +
                               labs(title = fung.title,
-                                   color = "Treatment",
-                                   shape = "Sex")
+                                   color = "Treatment")
   OsmiaCC.PCoA.fung.bee
 
 # Subset males
@@ -1181,11 +1187,11 @@
 ## Stacked community plot ----
   
 # Generate colorblind friendly palette
-  #Okabe.Ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+  Okabe.Ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
   
 # Stretch palette (define more intermediate color options)
-  #okabe.ext <- unikn::usecol(Okabe.Ito, n = 56)
-  #colors <- sample(okabe.ext)
+  okabe.ext <- unikn::usecol(Okabe.Ito, n = 56)
+  colors <- sample(okabe.ext)
   
 # Control provisions
   
@@ -1263,7 +1269,7 @@
                                       plot.title = element_text(hjust = -2.0)) +
                                 ylab("Relative abundance") + 
                                 ylim(0, 1.0) +
-                                xlab("Treatment") +
+                                xlab("Sample") +
                                 theme_bw() + 
                                 theme(text = element_text(size = 16)) +
                                 theme(panel.grid.major = element_blank(), 
@@ -1320,7 +1326,7 @@
                               theme(legend.justification = "left", 
                                     legend.title = element_text(size = 18, colour = "black"), 
                                     legend.text = element_text(size = 16, colour = "black")) + 
-                              guides(fill = guide_legend(ncol = 1)) +
+                              guides(fill = guide_legend(ncol = 2)) +
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               theme(panel.spacing.x = unit(0.1, "lines")) +
                               labs(fill = "Genera",

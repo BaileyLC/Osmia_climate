@@ -308,7 +308,7 @@
   OsmiaCC.stacked.bee
   
 # Save plot
-  ggsave("OsmiaCC_stacked_bee.png", plot = OsmiaCC.stacked.bee, width = 18, height = 12, units = "in")
+  ggsave("OsmiaCC_stacked_bee.png", plot = OsmiaCC.stacked.bee, width = 20, height = 18, units = "in")
   
 ## Provisions with male bees
   

@@ -76,10 +76,7 @@
 
 # Combine date and time columns
   all.sensors$DateTime <- as.POSIXct(paste(all.sensors$Date, all.sensors$Time),
-                                     format = "%Y-%m-%d %I:%M:%S %p")  
-
-# Temp colors
-  temp.colors <- c()
+                                     format = "%Y-%m-%d %I:%M:%S %p")
   
 # Manually order legend
   all.sensors$Sensor <- factor(all.sensors$Sensor, levels = c("Warm", "Ambient", "Cool"))
@@ -107,12 +104,20 @@
   gau.temp <- lmerTest::lmer(Temp ~ Sensor + (1|Date), data = all.sensors)
   summary(gau.temp)
   
+# ANOVA with Kenward-Roger approximation
+  if(requireNamespace("pbkrtest", quietly = TRUE))
+    anova(gau.temp, type = 2, ddf = "Kenward-Roger")  
+  
 # Pairwise comparisons with Tukey's HSD adjustment
   emmeans(gau.temp, pairwise ~ Sensor, adjust = "tukey")
 
 # LMM of humidity using date as a random intercept to account for repeated measures
   gau.humidity <- lmerTest::lmer(Humidity ~ Sensor + (1|Date), data = all.sensors)
   summary(gau.humidity)
+  
+# ANOVA with Kenward-Roger approximation
+  if(requireNamespace("pbkrtest", quietly = TRUE))
+    anova(gau.humidity, type = 2, ddf = "Kenward-Roger")  
   
 # Pairwise comparisons with Tukey's HSD adjustment
   emmeans(gau.humidity, pairwise ~ Sensor, adjust = "tukey")
@@ -158,7 +163,7 @@
   levels(males.health.mass$temp_treat)
   
 # LMM of larval biomass using grafting stage as a random intercept
-  gau.mass.M <- lmerTest::lmer(wet_mass_mg ~ micro_treat * temp_treat + (1|graft_stage), data = males.health.mass)
+  gau.mass.M <- lmerTest::lmer(wet_mass_mg ~ micro_treat + temp_treat + (1|graft_stage), data = males.health.mass)
  
 # Check for normality with Q-Q plots and the Shapiro-Wilk test
   stats::qqnorm(resid(gau.mass.M, type = "pearson"))
@@ -171,20 +176,15 @@
 # ANOVA with Kenward-Roger approximation
   if(requireNamespace("pbkrtest", quietly = TRUE))
     anova(gau.mass.M, type = 2, ddf = "Kenward-Roger")
-  
+
+# All pairwise comparisons with Tukey's HSD adjustment
+  emmeans(gau.mass.M, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
+
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
   pairs(emmeans(gau.mass.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
   
-# All pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gau.mass.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey") 
-  
-  
-# Save p-values  
-  stats.gau.mass.M <- tibble::tribble(
-                                      ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                        "AS",     "WN",    0.04,      "*"
-                                    )
-  stats.gau.mass.M
+#Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
+  pairs(emmeans(gau.mass.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
   
 # Reorder the x-axis
   males.health.mass$combo_treat <- factor(males.health.mass$combo_treat, levels = c("CS", "CN", "AS", "AN", "WS", "WN"))
@@ -210,12 +210,7 @@
                                values = climate.colors) +
             labs(title = bm.title) +
             ylab("Larval body mass (mg)") +
-            xlab("Treatment") +
-            ggpubr::stat_pvalue_manual(stats.gau.mass.M,
-                                       label = "p.adj.signif",
-                                       y.position = 18,
-                                       step.increase = 0.1,
-                                       tip.length = 0.01)
+            xlab("Treatment")
   bm.M
   
 # Females
@@ -244,7 +239,7 @@
   levels(females.health.mass$temp_treat)
   
 # LMM of larval biomass using grafting stage as a random intercept
-  gau.mass.F <- lmerTest::lmer(wet_mass_mg ~ micro_treat * temp_treat + (1|graft_stage), data = females.health.mass)
+  gau.mass.F <- lmerTest::lmer(wet_mass_mg ~ micro_treat + temp_treat + (1|graft_stage), data = females.health.mass)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilk test
   stats::qqnorm(resid(gau.mass.F, type = "pearson"))
@@ -310,7 +305,7 @@
   levels(males.health.mass$temp_treat)
   
 # LMM of larval fat content using grafting stage as a random intercept  
-  gau.fat.M <- lmerTest::lmer(prop_body_fat ~ micro_treat * temp_treat + (1|graft_stage), data = males.health.fat)
+  gau.fat.M <- lmerTest::lmer(prop_body_fat ~ micro_treat + temp_treat + (1|graft_stage), data = males.health.fat)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
   stats::qqnorm(resid(gau.fat.M, type = "pearson"))
@@ -325,16 +320,20 @@
     anova(gau.fat.M, type = 2, ddf = "Kenward-Roger")
   
 # Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
-  pairs(emmeans(gau.fat.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
+  emmeans(gau.fat.M, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
   
-# All pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gau.fat.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
+#Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
+  pairs(emmeans(gau.fat.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
+  
+# Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
+  pairs(emmeans(gau.fat.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
   
 # Save p-values  
   stats.gau.fat.M <- tibble::tribble(
                                      ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                       "WS",     "WN",    0.05,      "*",
-                                       "AS",     "WN",    0.04,      "*"
+                                       "AS",     "AN",    0.02,      "*",
+                                       "CS",     "CN",    0.02,      "*",
+                                       "WS",     "WN",    0.02,      "*"
                                  )
   stats.gau.fat.M
   
@@ -366,7 +365,6 @@
               ggpubr::stat_pvalue_manual(stats.gau.fat.M,
                                          label = "p.adj.signif",
                                          y.position = 6,
-                                         step.increase = 0.1,
                                          tip.length = 0.01)
   fat.M
   
@@ -396,7 +394,7 @@
   levels(females.health.mass$temp_treat)
   
 # LMM of larval fat content using grafting stage as a random intercept  
-  gau.fat.F <- lmerTest::lmer(prop_body_fat ~ micro_treat * temp_treat + (1|graft_stage), data = females.health.fat)
+  gau.fat.F <- lmerTest::lmer(prop_body_fat ~ micro_treat + temp_treat + (1|graft_stage), data = females.health.fat)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
   stats::qqnorm(resid(gau.fat.F, type = "pearson"))
@@ -461,7 +459,7 @@
   levels(males.duration$temp_treat)
   
 # LMM of larval development using grafting stage as a random intercept 
-  gau.dur.M <- lmerTest::lmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), data = males.duration)
+  gau.dur.M <- lmerTest::lmer(days_instar2.5 ~ micro_treat + temp_treat + (1|graft_stage), data = males.duration)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
   stats::qqnorm(resid(gau.dur.M, type = "pearson"))
@@ -469,7 +467,7 @@
   stats::shapiro.test(resid(gau.dur.M))
   
 # GLMM of larval development using grafting stage as a random intercept and gamma distribution
-  gam.dur.M <- lme4::glmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), family = Gamma, data = males.duration)
+  gam.dur.M <- lme4::glmer(days_instar2.5 ~ micro_treat + temp_treat + (1|graft_stage), family = Gamma, data = males.duration)
 
 # Check for heteroscedasticity
   plot(gam.dur.M)
@@ -480,24 +478,20 @@
 # ANOVA with Kenward-Roger approximation
   if(requireNamespace("pbkrtest", quietly = TRUE))
     anova(gau.dur.M, type = 2, ddf = "Kenward-Roger")
-  
-# Pairwise comparisons by temperature treatment with Tukey's HSD adjustment
-  pairs(emmeans(gam.dur.M, "micro_treat", by = "temp_treat"), adjust = "tukey")
-  
-#Pairwise comparisons by microbiome treatment with Tukey's HSD adjustment
-  pairs(emmeans(gam.dur.M, "temp_treat", by = "micro_treat"), adjust = "tukey")
-  
+
 # All pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gam.dur.M, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
+  emmeans(gam.dur.M, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
   
 # Save p-values
   stats.gam.dur.M <- tibble::tribble(
                                      ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                       "AS",     "WN",    0.03,      "*",
-                                       "CS",     "WS",    0.01,      "*",
-                                       "CS",     "WN",    0.0001,    "***",
-                                       "WS",     "CN",    0.04,      "*",
-                                       "CN",     "WN",    0.002,     "**"
+                                       "AS",     "WS",    0.005,      "**",
+                                       "AS",     "WN",    0.002,      "**",
+                                       "CS",     "WS",    0.0001,     "***",
+                                       "CS",     "WN",    0.0001,     "***",
+                                       "WS",     "CN",    0.01,       "*",
+                                       "AN",     "WN",    0.005,      "**",
+                                       "CN",     "WN",    0.001,      "***"
                                    )
   stats.gam.dur.M
   
@@ -519,7 +513,7 @@
                     panel.grid.minor = element_blank()) +
               theme(text = element_text(size = 16),
                     plot.title = element_text(hjust = -0.17)) +
-              ylim(0, 25) +
+              ylim(0, 30) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors,
                                  labels = climate.labs) +             
@@ -558,7 +552,7 @@
   levels(females.duration$temp_treat)
   
 # LMM of larval development using grafting stage as a random intercept 
-  gau.dur.F <- lmerTest::lmer(days_instar2.5 ~ micro_treat * temp_treat + (1|graft_stage), data = females.duration)
+  gau.dur.F <- lmerTest::lmer(days_instar2.5 ~ micro_treat + temp_treat + (1|graft_stage), data = females.duration)
   
 # Check for normality with Q-Q plots and the Shapiro-Wilks test
   stats::qqnorm(resid(gau.dur.F, type = "pearson"))
@@ -576,13 +570,14 @@
   pairs(emmeans(gau.dur.F, "temp_treat", by = "micro_treat"), adjust = "tukey")
   
 # All pairwise comparisons with Tukey's HSD adjustment
-  emmeans(gau.dur.F, pairwise ~ temp_treat * micro_treat, adjust = "tukey")
+  emmeans(gau.dur.F, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
   
 # Save p-values
   stats.gam.dur.F <- tibble::tribble(
                                      ~ group1, ~ group2, ~ p.adj, ~p.adj.signif,
-                                       "AS",     "WS",     0.004,     "**",
-                                       "AS",     "WN",     0.0006,    "**"
+                                       "AS",     "WS",     0.002,     "**",
+                                       "AS",     "WN",     0.001,     "**",
+                                       "AN",     "WN",     0.002,     "**"
                                   )
   stats.gam.dur.F
   
@@ -643,7 +638,11 @@
 # Add column and calculate percent mortality   
   males.mortality.ss$per_mort <- males.mortality.ss$n/males.mortality.ss$N
   males.mortality.ss
-
+  
+# Kruskal-Wallis test
+  mort <- stats::kruskal.test(per_mort ~ combo_treat, data = males.mortality.ss)
+  mort
+  
 # Females
   
 # How many bees from each treatment died within 48 h of grafting?
@@ -854,7 +853,7 @@
               Mean = mean(total_surv_days),
               SE = sd(total_surv_days)/sqrt(N))
   
-# Log-rank test (when rho = 0) to compare survival times between groups to expected survival time
+# Log-rank test (when rho = 0) to compare survival times between groups
   survival::survdiff(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration, rho = 0)
   
 # Gehan-Wilcoxon test (when rho = 1) to compare survival times between groups
@@ -873,7 +872,7 @@
   levels(males.duration$temp_treat)
   
 # Cox regression model to compare survival times between groups
-  cox.mod2 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat * micro_treat + (1|graft_stage), data = males.duration)
+  cox.mod2 <- coxme::coxme(Surv(total_surv_days, status) ~ temp_treat + micro_treat + (1|graft_stage), data = males.duration)
   summary(cox.mod2)
   
 # Test the proportional hazards assumption
@@ -882,7 +881,7 @@
   plot(cz2)
   
 # Accelerated failure time model
-  aftm.M <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat + micro_treat, data = males.duration, dist = "weibull")
+  aftm.M <- survival::survreg(Surv(total_surv_days, status) ~ temp_treat + micro_treat + graft_stage, data = males.duration, dist = "weibull")
   
 # Construct the residuals
   fitted.M <- aftm.M$linear.predictors
@@ -902,36 +901,10 @@
                          "Survival function of Extreme Value distribution"), 
          lty = c(1,2,1), col = c(1,1,2), bty = "n")
 
-# View model output  
+# View model output
   summary(aftm.M)
-  
-# Interpret coefficients 
-  aftm.M.natural <- exp(1)^-0.0722
-  aftm.M.natural <- 1 - aftm.M.natural
-  aftm.M.natural
-  
-  aftm.M.cool <- exp(1)^-0.0649
-  aftm.M.cool <- 1 - aftm.M.cool
-  aftm.M.cool
-  
-  aftm.M.warm <- exp(1)^-0.2691
-  aftm.M.warm <- 1 - aftm.M.warm
-  aftm.M.warm
-  
-# Obtain proportional hazards
-  aftm.M.ph <- -coef(aftm.M)/aftm.M$scale
-  aftm.M.ph
-  
-# Calculate hazard ratios
-  aftm.M.ph.cool <- exp(0.07359515)
-  aftm.M.ph.cool
-  
-  aftm.M.ph.warm <- exp(0.30519354)
-  aftm.M.ph.warm
-  
-  aftm.M.ph.natural <- exp(0.08189382)
-  aftm.M.ph.natural  
-  
+  stats::anova(aftm.M)
+
 # Kaplan-Meier with all male bees
   OsmiaCC.KP.all.M <- ggsurvfit(s2) +
                         theme_classic() +

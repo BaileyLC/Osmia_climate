@@ -193,7 +193,7 @@
   write.csv(otu_table(ps3), "OsmiaCC_16Sotu_all.csv")
   write.csv(otu_table(ps3.relabund), "OsmiaCC_16S_relabund.csv")
   
-# Subset provisions collected before and after homogenization
+# Subset provisions collected before and after homogenization (controls)
   ps4 <- phyloseq::subset_samples(ps3, sample_type == "initial provision")
   ps4
   
@@ -442,14 +442,17 @@
   
 # Examine the effects of temperature and sex on Shannon diversity, with graft stage as a random effect
   mod4 <- nlme::lme(Shannon ~ temp_treat + sex, random = ~1|graft_stage, data = bact.rich.bee)
+  summary(mod4)
   stats::anova(mod4)
   
 # Examine the effects of temperature and sex on Simpson diversity, with graft stage as a random effect
   mod5 <- nlme::lme(Simpson ~ temp_treat + sex, random = ~1|graft_stage, data = bact.rich.bee)
+  summary(mod5)
   stats::anova(mod5)
   
 # Examine the effects of temperature and sex on observed richness, with graft stage as a random effect
   mod6 <- nlme::lme(Observed ~ temp_treat + sex, random = ~1|graft_stage, data = bact.rich.bee)
+  summary(mod6)
   stats::anova(mod6)
   
 # Post-hoc test  
@@ -463,9 +466,6 @@
                                   geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                   geom_jitter(size = 1, alpha = 0.9) +
                                   theme_bw() +
-                                  facet_grid(~ sex, 
-                                             scale = "free", 
-                                             space = "free") +
                                   theme(legend.position = "none",
                                         plot.title = element_text(hjust = -0.12)) +
                                   theme(panel.grid.major = element_blank(),
@@ -476,7 +476,7 @@
                                   labs(title = bact.title) +
                                   xlab("Treatment") +
                                   ylab("Shannon index") +
-                                  ylim(0, 3)
+                                  ylim(0, 4)
   OsmiaCC.Shannon.bact.bee
   
 # Boxplot of Simpson index
@@ -505,9 +505,6 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
-                                    facet_grid(~ sex, 
-                                               scale = "free", 
-                                               space = "free") +
                                     theme(legend.position = "none",
                                           plot.title = element_text(hjust = -0.12)) +
                                     theme(panel.grid.major = element_blank(),
@@ -706,6 +703,7 @@
 
 # Examine the effects of temperature treatment and sex on evenness, with graft stage as a random effect
   mod13 <- nlme::lme(pielou ~ temp_treat + sex, random = ~1|graft_stage, data = bact.evenness)
+  summary(mod13)
   stats::anova(mod13)
   
 # Plot
@@ -826,6 +824,10 @@
   bact.perm.bee <- vegan::adonis2(bact.bray.bee ~ temp_treat + sex, data = sample.bact.bee)
   bact.perm.bee
   
+# Follow up with pairwise comparisons - which sample types differ?
+  bact.perm.bee.combo.BH <- RVAideMemoire::pairwise.perm.manova(bact.bray.bee, sample.bact.bee$combo_treat, p.method = "BH")
+  bact.perm.bee.combo.BH
+  
 # Set permutations to deal with graft stage
   perm.relabund <- permute::how(within = Within(type = "free"),
                                 plots = Plots(type = "none"),
@@ -848,6 +850,14 @@
 # Do any of the group dispersions differ?
   disp.bact.an.combo <- stats::anova(disp.bact.combo)
   disp.bact.an.combo
+  
+# Calculate the average distance of group members to the group centroid
+  disp.bact.sex <- vegan::betadisper(bact.bray, sample.bact$sex)
+  disp.bact.sex
+  
+# Do any of the group dispersions differ?
+  disp.bact.an.sex <- stats::anova(disp.bact.sex)
+  disp.bact.an.sex
 
 # Provisions without bees  
   
@@ -932,7 +942,7 @@
   sample_data(ps.prop.bact.bee)$combo_treat <- factor(sample_data(ps.prop.bact.bee)$combo_treat, levels = c("CN", "AN", "WN"))
   
 # Plot ordination
-  OsmiaCC.PCoA.bact.bee <- plot_ordination(ps.prop.bact.bee, ord.pcoa.bray.bee, color = "combo_treat", shape = "sex") + 
+  OsmiaCC.PCoA.bact.bee <- plot_ordination(ps.prop.bact.bee, ord.pcoa.bray.bee, color = "combo_treat") + 
                                 theme_bw() +
                                 theme(legend.position = "none",
                                       plot.title = element_text(hjust = -0.25)) +
@@ -945,8 +955,7 @@
                                 geom_point(size = 3) +
                                 scale_color_manual(values = climate.colors) +
                                 labs(title = bact.title,
-                                     color = "Treatment",
-                                     shape = "Sex")
+                                     color = "Treatment")
   OsmiaCC.PCoA.bact.bee
   
 # Subset males
@@ -1202,7 +1211,7 @@
                                   theme(legend.justification = "left", 
                                         legend.title = element_text(size = 18, colour = "black"), 
                                         legend.text = element_text(size = 16, colour = "black")) + 
-                                  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                  theme(axis.legend.x = element_blank()) +
                                   theme(panel.spacing.x = unit(0.1, "lines")) +
                                   guides(fill = guide_legend(ncol = 1)) +
                                   labs(fill = "Genera",
@@ -1243,7 +1252,7 @@
                                     plot.title = element_text(hjust = -2.0)) +
                               ylab("Relative abundance") + 
                               ylim(0, 1.0) +
-                              xlab("Sample") +
+                              xlab("") +
                               theme_bw() + 
                               theme(text = element_text(size = 16)) +
                               theme(panel.grid.major = element_blank(), 
@@ -1298,7 +1307,7 @@
                                     plot.title = element_text(hjust = -2.0)) +
                               ylab("Relative abundance") + 
                               ylim(0, 1.0) +
-                              xlab("Sample") +
+                              xlab("") +
                               theme_bw() + 
                               theme(text = element_text(size = 16)) +
                               theme(panel.grid.major = element_blank(), 
@@ -1308,7 +1317,7 @@
                                     legend.text = element_text(size = 16, colour = "black")) + 
                               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
                               theme(panel.spacing.x = unit(0.1, "lines")) +
-                              guides(fill = guide_legend(ncol = 1)) +
+                              guides(fill = guide_legend(ncol = 2)) +
                               labs(fill = "Genera",
                                    title = bact.title)
   OsmiaCC.gen.bact.bee
@@ -1405,7 +1414,7 @@
                                     ylab("Relative abundance") + 
                                     ylim(0, 1.0) +
                                     scale_x_discrete(expand = c(0, 1)) +
-                                    xlab("Sample") +
+                                    xlab("") +
                                     theme_bw() + 
                                     theme(text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(), 
@@ -1506,7 +1515,6 @@
   arseno <- read.csv("OsmiaCC_Arsenophonus.csv")
   
 # Kruskal-Wallis test
-  stats::kruskal.test(rel_abund ~ combo_treat, data = arseno)
   stats::kruskal.test(rel_abund ~ temp_treat, data = arseno)
   stats::kruskal.test(rel_abund ~ sex, data = arseno)
   

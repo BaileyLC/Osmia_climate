@@ -1204,14 +1204,13 @@
                                         plot.title = element_text(hjust = -2.0)) +
                                   ylab("Relative abundance") + 
                                   ylim(0, 1.0) +
-                                  xlab("Sample") +
+                                  xlab("") +
                                   theme_bw() + 
                                   theme(text = element_text(size = 16)) +
                                   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
                                   theme(legend.justification = "left", 
                                         legend.title = element_text(size = 18, colour = "black"), 
-                                        legend.text = element_text(size = 16, colour = "black")) + 
-                                  theme(axis.legend.x = element_blank()) +
+                                        legend.text = element_text(size = 16, colour = "black")) +
                                   theme(panel.spacing.x = unit(0.1, "lines")) +
                                   guides(fill = guide_legend(ncol = 1)) +
                                   labs(fill = "Genera",
@@ -1514,9 +1513,19 @@
 # Import data
   arseno <- read.csv("OsmiaCC_Arsenophonus.csv")
   
+# Remove NAs  
+  arseno <- arseno[complete.cases(arseno), ]
+  
 # Kruskal-Wallis test
   stats::kruskal.test(rel_abund ~ temp_treat, data = arseno)
   stats::kruskal.test(rel_abund ~ sex, data = arseno)
+  
+# Stats  
+  arseno %>%
+    group_by(combo_treat) %>%
+    summarise(N = n(),
+              mean = mean(rel_abund),
+              se = sd(rel_abund)/sqrt(N))
   
 # Reorder x-axis
   arseno$combo_treat <- factor(arseno$combo_treat, levels = c("CN", "AN","WN"))

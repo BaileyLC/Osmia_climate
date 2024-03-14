@@ -96,6 +96,19 @@
                 scale_linetype_manual(name = "Variable", values = c("solid", "dashed"))
   treats
   
+# Sensor stats
+  all.sensors %>%
+    group_by(Sensor) %>%
+    summarise(N = n(),
+              Temp_mean = mean(Temp),
+              Temp_SE = sd(Temp)/sqrt(N),
+              Temp_min = min(Temp),
+              Temp_max = max(Temp),
+              RH_mean = mean(Humidity),
+              RH_SE = sd(Humidity)/sqrt(N),
+              RH_min = min(Humidity),
+              RH_max = max(Humidity))
+  
 # Set Sensor reference group as ambient  
   all.sensors <- all.sensors %>% mutate(Sensor = relevel(Sensor, ref = "Ambient"))
   levels(all.sensors$Sensor)
@@ -106,7 +119,7 @@
   
 # ANOVA with Kenward-Roger approximation
   if(requireNamespace("pbkrtest", quietly = TRUE))
-    anova(gau.temp, type = 2, ddf = "Kenward-Roger")  
+    anova(gau.temp, type = 2, ddf = "Kenward-Roger")
   
 # Pairwise comparisons with Tukey's HSD adjustment
   emmeans(gau.temp, pairwise ~ Sensor, adjust = "tukey")
@@ -122,19 +135,6 @@
 # Pairwise comparisons with Tukey's HSD adjustment
   emmeans(gau.humidity, pairwise ~ Sensor, adjust = "tukey")
 
-# Metadata
-  all.sensors %>%
-    group_by(Sensor) %>%
-    summarise(N = n(),
-              Temp_mean = mean(Temp),
-              Temp_se = sd(Temp)/sqrt(N),
-              Temp_min = min(Temp),
-              Temp_max = max(Temp),
-              RH_mean = mean(Humidity),
-              RH_se = sd(Humidity)/sqrt(N),
-              RH_min = min(Humidity),
-              RH_max = max(Humidity))
-  
 ## Larval body mass ----
   
 # Males
@@ -143,7 +143,7 @@
   males.health.mass <- males.health %>%
     dplyr::select(bee, temp_treat, micro_treat, combo_treat, graft_stage, wet_mass_mg)
 
-# Determine sample sizes, mean, and sd of males by treatment
+# Determine sample sizes, mean, and SE of males by treatment
   males.health.mass %>%
     group_by(combo_treat) %>%
     summarise(N = n(),
@@ -219,7 +219,7 @@
   females.health.mass <- females.health %>%
     dplyr::select(bee, temp_treat, micro_treat, combo_treat, graft_stage, wet_mass_mg)
   
-# Determine sample sizes, mean, and sd of males by treatment
+# Determine sample sizes, mean, and SE of males by treatment
   females.health.mass %>%
     group_by(combo_treat) %>%
     summarise(N = n(),
@@ -285,12 +285,12 @@
   males.health.fat <- males.health %>%
     dplyr::select(bee, temp_treat, micro_treat, combo_treat, graft_stage, prop_body_fat)
   
-# Determine sample sizes, mean, and sd of males by treatment
+# Determine sample sizes, mean, and SE of males by treatment
   males.health.fat %>%
     group_by(combo_treat) %>%
     summarise(N = n(),
               Mean = mean(prop_body_fat), 
-              SD = sd(prop_body_fat))
+              SE = sd(prop_body_fat)/sqrt(N))
   
 # Change micro_treat and temp_treat to factors
   males.health.fat$micro_treat <- as.factor(males.health.fat$micro_treat)
@@ -379,7 +379,7 @@
     group_by(combo_treat) %>%
     summarise(N = n(),
               Mean = mean(prop_body_fat), 
-              SD = sd(prop_body_fat))
+              SE = sd(prop_body_fat)/sqrt(N))
   
 # Change micro_treat and temp_treat to factors
   females.health.fat$micro_treat <- as.factor(females.health.fat$micro_treat)
@@ -432,19 +432,19 @@
               xlab("Treatment")
   fat.F
   
-## Duration of developmental stages ----
+## Duration of larval development ----
 
 # Males  
   
 # Remove rows without complete data
   males.duration <- males.duration[!is.na(males.duration$days_instar2.5), ] 
   
-# Determine sample sizes, mean, and sd of males by treatment
+# Determine sample sizes, mean, and SE of males by treatment
   males.duration %>%
     group_by(combo_treat) %>%
     summarise(N = n(),
               Mean = mean(days_instar2.5), 
-              SD = sd(days_instar2.5))
+              SE = sd(days_instar2.5)/sqrt(N))
   
 # Change micro_treat and temp_treat to factors
   males.duration$micro_treat <- as.factor(males.duration$micro_treat)
@@ -474,11 +474,8 @@
   
 # GLMM output
   summary(gam.dur.M)
+  car::Anova(gam.dur.M, type = 3)
   
-# ANOVA with Kenward-Roger approximation
-  if(requireNamespace("pbkrtest", quietly = TRUE))
-    anova(gau.dur.M, type = 2, ddf = "Kenward-Roger")
-
 # All pairwise comparisons with Tukey's HSD adjustment
   emmeans(gam.dur.M, pairwise ~ temp_treat + micro_treat, adjust = "tukey")
   

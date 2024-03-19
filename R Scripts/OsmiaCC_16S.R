@@ -1426,7 +1426,7 @@
                                     theme(panel.spacing.x = unit(0.1, "lines")) +
                                     guides(fill = guide_legend(ncol = 1)) +
                                     labs(fill = "Genera",
-                                         title = "A")
+                                         title = bact.title)
   OsmiaCC.15gen.relabund.bact
   
 ## Differential abundance with rarefied data ----
@@ -1513,7 +1513,8 @@
 # Import data
   arseno <- read.csv("OsmiaCC_Arsenophonus.csv")
   
-# Remove NAs  
+# Remove 0s
+  arseno$rel_abund[arseno$rel_abund == 0] <- NA
   arseno <- arseno[complete.cases(arseno), ]
   
 # Kruskal-Wallis test
@@ -1540,6 +1541,7 @@
                           scale_color_manual(name = "Treatment", 
                                              values = climate.colors) +
                           xlab("Treatment") +
-                          ylab("Relative abundance")
+                          ylab("Relative abundance") +
+                          ylim(0, 1.0)
   arseno.rel.abund
   

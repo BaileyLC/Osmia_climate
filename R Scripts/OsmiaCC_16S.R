@@ -50,7 +50,7 @@
 ## Import data
   seqtab.nochim <- readRDS("OsmiaCC_seqs16Sall.rds")
   taxa <- readRDS("OsmiaCC_taxa16Sall.rds")
-  meta16S.CC <- read.csv("OsmiaCC_master - 16S_worked.csv")
+  meta16S.CC <- read.csv("OsmiaCC_metadata - 16S_worked.csv")
 
 ## Create phyloseq object ----
 

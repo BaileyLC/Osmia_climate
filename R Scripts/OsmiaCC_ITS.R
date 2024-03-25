@@ -52,7 +52,7 @@
   
   seqtab.nochim2 <- readRDS("OsmiaCC_seqsITS_run2.rds")
   taxa2 <- readRDS("OsmiaCC_taxaITS_run2.rds")
-  metaITS.CC.run2 <- read.csv("OsmiaCC_master - ITS_run2.csv")
+  metaITS.CC.run2 <- read.csv("OsmiaCC_metadata - ITS_run2.csv")
 
 ## Create phyloseq objects for each ITS run ----
 

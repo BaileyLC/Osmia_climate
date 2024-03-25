@@ -48,7 +48,7 @@
 # Import data
   seqtab.nochim1 <- readRDS("OsmiaCC_seqsITS_run1.rds")
   taxa1 <- readRDS("OsmiaCC_taxaITS_run1.rds")
-  metaITS.CC.run1 <- read.csv("OsmiaCC_master - ITS_run1.csv")
+  metaITS.CC.run1 <- read.csv("OsmiaCC_metadata - ITS_run1.csv")
   
   seqtab.nochim2 <- readRDS("OsmiaCC_seqsITS_run2.rds")
   taxa2 <- readRDS("OsmiaCC_taxaITS_run2.rds")

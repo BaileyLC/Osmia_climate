@@ -1,0 +1,21 @@
+sample,rel_abund,temp_treat,micro_treat,combo_treat,sex,sample_type
+OCC10,0.74,cool,natural,CN,M,final provision
+OCC118,0,cool,natural,CN,M,final provision
+OCC13,0.568181818,ambient,natural,AN,F,final provision
+OCC133,NA,warm,natural,WN,M,final provision
+OCC142,0.64,ambient,natural,AN,M,final provision
+OCC143,0.909090909,warm,natural,WN,F,final provision
+OCC156,0.801980198,warm,natural,WN,F,final provision
+OCC16,0.304347826,ambient,natural,AN,M,final provision
+OCC162,0.774774775,ambient,natural,AN,M,final provision
+OCC17,1,ambient,natural,AN,M,final provision
+OCC26,0.921875,warm,natural,WN,F,final provision
+OCC34,0.482479784,warm,natural,WN,M,final provision
+OCC43,0,cool,natural,CN,M,final provision
+OCC46,0.947368421,cool,natural,CN,M,final provision
+OCC48,0.68,cool,natural,CN,M,final provision
+OCC7,0.939393939,warm,natural,WN,F,final provision
+OCC76,0.977876106,warm,natural,WN,M,final provision
+OCC85,0.732673267,cool,natural,CN,M,final provision
+OCC94,0.818181818,ambient,natural,AN,M,final provision
+OCC99,0.636363636,warm,natural,WN,F,final provision

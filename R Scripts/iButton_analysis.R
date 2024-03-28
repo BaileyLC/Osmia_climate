@@ -20,7 +20,7 @@
 # Import and format data
 
 # Import data
-  all_loggers <- list.files(path = "data_logger", full.names = TRUE) %>% 
+  all_loggers <- list.files(path = "iButton_loggers", full.names = TRUE) %>% 
     lapply(read_csv) %>% 
       bind_rows
   

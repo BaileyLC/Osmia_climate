@@ -7,7 +7,7 @@
 ## Prepare work space ----
 
 # Set working directory
-  setwd("~/Downloads")
+  setwd("~/Downloads/OsmiaCC")
 
 # Load necessary packages
   library(stringr) # Version 1.5.1
@@ -368,10 +368,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
@@ -386,14 +393,21 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = bact.title) + 
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
                                     ylab("Simpson index") +
                                     ylim(0, 1.0)
@@ -404,11 +418,18 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
-                                    scale_color_manual(name = "Treatment",
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
+                                    scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
                                     labs(title = bact.title) +
@@ -466,17 +487,24 @@
                                   geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                   geom_jitter(size = 1, alpha = 0.9) +
                                   theme_bw() +
+                                  theme(text = element_text(size = 24)) +
                                   theme(legend.position = "none",
-                                        plot.title = element_text(hjust = -0.12)) +
+                                        plot.title = element_text(hjust = -0.12),
+                                        legend.title = element_text(size = 20),
+                                        legend.text = element_text(size = 16)) +
                                   theme(panel.grid.major = element_blank(),
                                         panel.grid.minor = element_blank()) +
+                                  theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                        axis.title.x = element_text(size = 16, colour = "black"),
+                                        axis.text.y = element_text(size = 14, colour = "black"),
+                                        axis.title.y = element_text(size = 16, colour = "black")) +
                                   scale_color_manual(name = "Treatment", 
                                                      values = climate.colors,
                                                      labels = climate.labs) +
                                   labs(title = bact.title) +
                                   xlab("Treatment") +
                                   ylab("Shannon index") +
-                                  ylim(0, 4)
+                                  ylim(0, 5)
   OsmiaCC.Shannon.bact.bee
   
 # Boxplot of Simpson index
@@ -487,10 +515,17 @@
                                   facet_grid(~ sex, 
                                              scale = "free", 
                                              space = "free") +
+                                  theme(text = element_text(size = 24)) +
                                   theme(legend.position = "none",
-                                        plot.title = element_text(hjust = -0.12)) +
+                                        plot.title = element_text(hjust = -0.12),
+                                        legend.title = element_text(size = 20),
+                                        legend.text = element_text(size = 16)) +
                                   theme(panel.grid.major = element_blank(),
                                         panel.grid.minor = element_blank()) +
+                                  theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                        axis.title.x = element_text(size = 16, colour = "black"),
+                                        axis.text.y = element_text(size = 14, colour = "black"),
+                                        axis.title.y = element_text(size = 16, colour = "black")) +
                                   scale_color_manual(name = "Treatment", 
                                                      values = climate.colors,
                                                      labels = climate.labs) +
@@ -505,10 +540,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
                                     scale_color_manual(name = "Treatment",
                                                        values = climate.colors,
                                                        labels = climate.labs) +
@@ -553,10 +595,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
@@ -571,14 +620,21 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = bact.title) + 
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
                                     ylab("Simpson index") +
                                     ylim(0, 1.0)
@@ -589,13 +645,21 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
-                                    scale_color_manual(name = "Treatment",
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
+                                    scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
                                     ylab("Observed richness") +
                                     ylim(0, 70) +
@@ -631,10 +695,17 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
@@ -649,14 +720,21 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
                                     scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
-                                    labs(title = bact.title) + 
+                                    labs(title = bact.title) +
                                     xlab("Treatment") +
                                     ylab("Simpson index") +
                                     ylim(0, 1.0)
@@ -667,11 +745,18 @@
                                     geom_boxplot(outlier.shape = NA, width = 0.5, position = position_dodge(width = 0.1)) +
                                     geom_jitter(size = 1, alpha = 0.9) +
                                     theme_bw() +
+                                    theme(text = element_text(size = 24)) +
                                     theme(legend.position = "none",
-                                          plot.title = element_text(hjust = -0.12)) +
+                                          plot.title = element_text(hjust = -0.12),
+                                          legend.title = element_text(size = 20),
+                                          legend.text = element_text(size = 16)) +
                                     theme(panel.grid.major = element_blank(),
                                           panel.grid.minor = element_blank()) +
-                                    scale_color_manual(name = "Treatment",
+                                    theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                          axis.title.x = element_text(size = 16, colour = "black"),
+                                          axis.text.y = element_text(size = 14, colour = "black"),
+                                          axis.title.y = element_text(size = 16, colour = "black")) +
+                                    scale_color_manual(name = "Treatment", 
                                                        values = climate.colors,
                                                        labels = climate.labs) +
                                     labs(title = bact.title) +
@@ -712,9 +797,15 @@
                                 geom_jitter(size = 1, alpha = 0.9) +
                                 theme_bw() +
                                 theme(legend.position = "none",
-                                      plot.title = element_text(hjust = -0.12)) +
+                                      plot.title = element_text(hjust = -0.12),
+                                      legend.title = element_text(size = 20),
+                                      legend.text = element_text(size = 16)) +
                                 theme(panel.grid.major = element_blank(),
                                       panel.grid.minor = element_blank()) +
+                                theme(axis.text.x = element_text(size = 14, colour = "black"),
+                                      axis.title.x = element_text(size = 16, colour = "black"),
+                                      axis.text.y = element_text(size = 14, colour = "black"),
+                                      axis.title.y = element_text(size = 16, colour = "black")) +
                                 labs(title = bact.title) +
                                 ylab("Pielou's Evenness") +
                                 ylim(0, 1.0) +
@@ -897,9 +988,14 @@
   OsmiaCC.PCoA.bact <- plot_ordination(ps.prop.bact, ord.pcoa.bray, color = "combo_treat", shape = "sample_type") + 
                           theme_bw() +
                           theme(legend.position = "none",
-                                plot.title = element_text(hjust = -0.15)) +
+                                plot.title = element_text(hjust = -0.15),
+                                text = element_text(size = 24)) +
                           theme(panel.grid.major = element_blank(),
                                 panel.grid.minor = element_blank()) +
+                          theme(axis.text.x = element_text(size = 16, colour = "black"),
+                                axis.text.y = element_text(size = 16, colour = "black"),
+                                axis.title.x = element_text(size = 18, colour = "black"),
+                                axis.title.y = element_text(size = 18, colour = "black")) +
                           theme(legend.justification = "left") + 
                           geom_point(size = 3) +
                           scale_color_manual(values = climate.colors) +
@@ -1206,11 +1302,12 @@
                                   ylim(0, 1.0) +
                                   xlab("") +
                                   theme_bw() + 
-                                  theme(text = element_text(size = 16)) +
+                                  theme(text = element_text(size = 24)) +
                                   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
                                   theme(legend.justification = "left", 
-                                        legend.title = element_text(size = 18, colour = "black"), 
-                                        legend.text = element_text(size = 16, colour = "black")) +
+                                        legend.title = element_text(size = 24, colour = "black"), 
+                                        legend.text = element_text(size = 20, colour = "black")) +
+                                  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 12)) +
                                   theme(panel.spacing.x = unit(0.1, "lines")) +
                                   guides(fill = guide_legend(ncol = 1)) +
                                   labs(fill = "Genera",
@@ -1253,13 +1350,13 @@
                               ylim(0, 1.0) +
                               xlab("") +
                               theme_bw() + 
-                              theme(text = element_text(size = 16)) +
+                              theme(text = element_text(size = 24)) +
                               theme(panel.grid.major = element_blank(), 
                                     panel.grid.minor = element_blank()) + 
                               theme(legend.justification = "left", 
-                                    legend.title = element_text(size = 18, colour = "black"), 
-                                    legend.text = element_text(size = 16, colour = "black")) + 
-                              theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                    legend.title = element_text(size = 24, colour = "black"), 
+                                    legend.text = element_text(size = 18, colour = "black")) + 
+                              theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 14)) +
                               theme(panel.spacing.x = unit(0.1, "lines")) +
                               guides(fill = guide_legend(ncol = 1)) +
                               labs(fill = "Genera",
@@ -1308,15 +1405,15 @@
                               ylim(0, 1.0) +
                               xlab("") +
                               theme_bw() + 
-                              theme(text = element_text(size = 16)) +
+                              theme(text = element_text(size = 24)) +
                               theme(panel.grid.major = element_blank(), 
                                     panel.grid.minor = element_blank()) + 
                               theme(legend.justification = "left", 
-                                    legend.title = element_text(size = 18, colour = "black"), 
-                                    legend.text = element_text(size = 16, colour = "black")) + 
-                              theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                    legend.title = element_text(size = 24, colour = "black"), 
+                                    legend.text = element_text(size = 18, colour = "black")) + 
+                              theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 14)) +
                               theme(panel.spacing.x = unit(0.1, "lines")) +
-                              guides(fill = guide_legend(ncol = 2)) +
+                              guides(fill = guide_legend(ncol = 1)) +
                               labs(fill = "Genera",
                                    title = bact.title)
   OsmiaCC.gen.bact.bee
@@ -1415,14 +1512,14 @@
                                     scale_x_discrete(expand = c(0, 1)) +
                                     xlab("") +
                                     theme_bw() + 
-                                    theme(text = element_text(size = 16)) +
+                                    theme(text = element_text(size = 24)) +
                                     theme(panel.grid.major = element_blank(), 
                                           panel.grid.minor = element_blank()) + 
                                     theme(legend.justification = "left", 
-                                          legend.title = element_text(size = 16, colour = "black"), 
-                                          legend.text = element_text(size = 12, colour = "black"),
-                                          strip.text = element_text(size = 14)) + 
-                                    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+                                          legend.title = element_text(size = 24, colour = "black"), 
+                                          legend.text = element_text(size = 20, colour = "black"),
+                                          strip.text = element_text(size = 16)) + 
+                                    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 12)) +
                                     theme(panel.spacing.x = unit(0.1, "lines")) +
                                     guides(fill = guide_legend(ncol = 1)) +
                                     labs(fill = "Genera",
@@ -1523,13 +1620,13 @@
   
 # Stats  
   arseno %>%
-    group_by(combo_treat) %>%
+    group_by(temp_treat) %>%
     summarise(N = n(),
               mean = mean(rel_abund),
               se = sd(rel_abund)/sqrt(N))
   
 # Reorder x-axis
-  arseno$combo_treat <- factor(arseno$combo_treat, levels = c("CN", "AN","WN"))
+  arseno$combo_treat <- factor(arseno$combo_treat, levels = c("CN", "AN", "WN"))
 
 # Plot
   arseno.rel.abund <- ggplot(arseno, aes(x = combo_treat, y = rel_abund, color = combo_treat)) + 
@@ -1539,7 +1636,8 @@
                           theme(panel.grid.major = element_blank(),
                                 panel.grid.minor = element_blank()) +
                           scale_color_manual(name = "Treatment", 
-                                             values = climate.colors) +
+                                             values = climate.colors,
+                                             labels = climate.labs) +
                           xlab("Treatment") +
                           ylab("Relative abundance") +
                           ylim(0, 1.0)

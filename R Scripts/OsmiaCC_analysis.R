@@ -88,7 +88,12 @@
                 theme_bw() +
                 theme(panel.grid.major = element_blank(),
                       panel.grid.minor = element_blank()) +
-                theme(text = element_text(size = 12)) +
+                theme(axis.text.x = element_text(size = 16, colour = "black"),
+                      axis.text.y = element_text(size = 16, colour = "black"),
+                      axis.title.x = element_text(size = 18, colour = "black"),
+                      axis.title.y = element_text(size = 18, colour = "black")) +
+                theme(legend.title = element_text(size = 20),
+                      legend.text = element_text(size = 16)) +
                 xlab("Date") +
                 scale_y_continuous(name = "Temperature (°C)", 
                                    sec.axis = sec_axis(trans = ~.*1, name = "Relative Humidity (%)")) +
@@ -204,10 +209,15 @@
                   plot.title = element_text(hjust = -0.17)) +
             theme(panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank()) +
-            theme(text = element_text(size = 16)) +
+            theme(axis.text.x = element_text(size = 12, colour = "black"),
+                  axis.text.y = element_text(size = 12, colour = "black"),
+                  axis.title.x = element_text(size = 14, colour = "black"),
+                  axis.title.y = element_text(size = 14, colour = "black")) +
+            theme(text = element_text(size = 24)) +
             ylim(0, 20) +
             scale_color_manual(name = "Treatment", 
-                               values = climate.colors) +
+                               values = climate.colors,
+                               labels = climate.labs) +
             labs(title = bm.title) +
             ylab("Larval body mass (mg)") +
             xlab("Treatment")
@@ -268,7 +278,11 @@
                     plot.title = element_text(hjust = -0.16)) +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
-              theme(text = element_text(size = 16)) +
+              theme(axis.text.x = element_text(size = 12, colour = "black"),
+                    axis.text.y = element_text(size = 12, colour = "black"),
+                    axis.title.x = element_text(size = 14, colour = "black"),
+                    axis.title.y = element_text(size = 14, colour = "black")) +
+              theme(text = element_text(size = 24)) +
               ylim(0, 20) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors) +
@@ -355,10 +369,15 @@
                     plot.title = element_text(hjust = -0.15)) +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
-              theme(text = element_text(size = 16)) +
+              theme(axis.text.x = element_text(size = 12, colour = "black"),
+                    axis.text.y = element_text(size = 12, colour = "black"),
+                    axis.title.x = element_text(size = 14, colour = "black"),
+                    axis.title.y = element_text(size = 14, colour = "black")) +
+              theme(text = element_text(size = 24)) +
               ylim(0, 8) +
               scale_color_manual(name = "Treatment", 
-                                 values = climate.colors) +
+                                 values = climate.colors,
+                                 labels = climate.labs) +
               labs(title = fat.title) +
               ylab("Proportion of body fat") + 
               xlab("Treatment") +
@@ -423,7 +442,11 @@
                     plot.title = element_text(hjust = -0.14)) +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
-              theme(text = element_text(size = 16)) +
+              theme(axis.text.x = element_text(size = 12, colour = "black"),
+                    axis.text.y = element_text(size = 12, colour = "black"),
+                    axis.title.x = element_text(size = 14, colour = "black"),
+                    axis.title.y = element_text(size = 14, colour = "black")) +
+              theme(text = element_text(size = 24)) +
               ylim(0, 8) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors) +
@@ -508,8 +531,14 @@
               theme_bw() +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
-              theme(text = element_text(size = 16),
+              theme(axis.text.x = element_text(size = 12, colour = "black"),
+                    axis.text.y = element_text(size = 12, colour = "black"),
+                    axis.title.x = element_text(size = 14, colour = "black"),
+                    axis.title.y = element_text(size = 14, colour = "black")) +
+              theme(text = element_text(size = 24),
                     plot.title = element_text(hjust = -0.17)) +
+              theme(legend.title = element_text(size = 14, colour = "black"), 
+                    legend.text = element_text(size = 12, colour = "black")) +
               ylim(0, 30) +
               scale_color_manual(name = "Treatment", 
                                  values = climate.colors,
@@ -591,7 +620,11 @@
               theme_bw() +
               theme(panel.grid.major = element_blank(),
                     panel.grid.minor = element_blank()) +
-              theme(text = element_text(size = 16),
+              theme(axis.text.x = element_text(size = 12, colour = "black"),
+                    axis.text.y = element_text(size = 12, colour = "black"),
+                    axis.title.x = element_text(size = 14, colour = "black"),
+                    axis.title.y = element_text(size = 14, colour = "black")) +
+              theme(text = element_text(size = 24),
                     plot.title = element_text(hjust = -0.16)) +
               ylim(0, 25) +
               scale_color_manual(name = "Treatment", 
@@ -763,7 +796,6 @@
   
 # Accelerated failure time model
   aftm.all <- survival::survreg(Surv(total_surv_days, status) ~ sex + temp_treat + micro_treat + graft_stage, data = duration, dist = "weibull")
-  summary(aftm.all)
   
 # Use Kaplan-Meier estimator of the residuals to determine the fit of distribution
   
@@ -784,6 +816,9 @@
   legend("bottomleft", c("KM estimate", "95% CI KM estimate", 
                          "Survival function of Extreme Value distribution"), 
          lty = c(1,2,1), col = c(1,1,2), bty = "n")
+  
+# View model output
+  summary(aftm.all)
   
 # Males only
   
